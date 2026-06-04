@@ -64,6 +64,26 @@ def compute_identity_hash(tier1: dict[str, Any]) -> str:
     return hash_payload(subset)
 
 
+def compute_hardware_fingerprint(scan_data: dict[str, Any]) -> str:
+    """Match Windows agent HardwareFingerprintService (session submit validation)."""
+    t1 = scan_data.get("tier1_certification_identity") or {}
+    parts = [
+        t1.get("serial_number_hash"),
+        t1.get("hardware_uuid_hash"),
+        t1.get("motherboard_serial_hash"),
+        t1.get("primary_storage_serial_hash"),
+    ]
+    payload = "|".join(p for p in parts if p)
+    if not payload:
+        payload = "|".join(
+            filter(
+                None,
+                [t1.get("manufacturer"), t1.get("model"), t1.get("cpu_model")],
+            )
+        )
+    return hashlib.sha256(payload.encode("utf-8")).hexdigest()
+
+
 def compute_value_hash(tier2: dict[str, Any]) -> str:
     """Compute value hash from Tier 2 fields only."""
     subset = {k: tier2.get(k) for k in TIER2_VALUE_FIELDS if k in tier2}

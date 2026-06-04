@@ -11,6 +11,7 @@ from app.db.records import (
     Profile,
     Tenant,
     TenantUser,
+    ScanSession,
     VerificationAttempt,
 )
 from app.db.repository import Database, get_db, init_db
@@ -27,6 +28,7 @@ __all__ = [
     "Profile",
     "Tenant",
     "TenantUser",
+    "ScanSession",
     "VerificationAttempt",
     "get_db",
     "init_db",

@@ -1,49 +1,81 @@
-# DeviceCertAgent — Windows Desktop Agent
+# VerifyTech Agent — Windows Desktop
 
-Professional WPF desktop app + shared Core library for device certification and verification.
+Professional WPF wizard for device certification with short-lived scan sessions (no embedded API keys).
 
 ## Architecture
 
 ```
 agent/windows/
-├── DeviceCertAgent.App/      # WPF UI (MVVM) — main executable
-├── DeviceCertAgent.Core/     # Collectors, hashing, schema, API client
-├── DeviceCertAgent.Tests/    # Unit tests
-└── publish/                  # Published DeviceCertAgent.exe (after build)
+├── DeviceCertAgent.App/      # WPF UI (VerifyTech branded)
+├── DeviceCertAgent.Core/     # Collectors, scan sessions, API client
+├── DeviceCertAgent.Tests/
+└── publish/                  # DeviceCertAgent.exe after Windows build
 ```
 
-## API endpoint configuration
+## Default production API
 
-1. `--api-url http://localhost:8000` (CLI)
-2. `appsettings.local.json` (beside exe)
-3. Default: `https://api.yourdomain.com`
+`https://verifytech-production.up.railway.app`
 
-See `appsettings.local.json.example`. Set `"mockApi": true` for offline UI testing.
+Production builds use this endpoint automatically. Endpoint overrides are disabled unless built for development/QA.
 
-## Build
+## Build channels
 
-**WPF must be built on Windows** with .NET 8 SDK.
+| Channel | Command | Endpoint override |
+|---------|---------|-------------------|
+| **production** | `VERIFYTECH_BUILD_CHANNEL=production ./scripts/build-agent.sh` | Env var only with `VERIFYTECH_ALLOW_ENDPOINT_OVERRIDE=1` |
+| **staging** | `VERIFYTECH_BUILD_CHANNEL=staging ./scripts/build-agent.sh` | Same as production |
+| **development** | Default on Windows without channel | `appsettings.local.json`, `VERIFYTECH_API_BASE_URL`, `--api-url` |
 
-Mac/Linux — Core + tests only:
+WPF must be built on **Windows** with .NET 8 SDK.
 
 ```bash
-dotnet build DeviceCertAgent.Core/DeviceCertAgent.Core.csproj
-dotnet test
+VERIFYTECH_BUILD_CHANNEL=production ./scripts/build-agent.sh
 ```
 
-Windows publish:
+## Local development
+
+Copy `appsettings.local.json.example` to `DeviceCertAgent.App/appsettings.local.json`:
+
+```json
+{
+  "apiBaseUrl": "http://localhost:8000",
+  "environment": "development",
+  "mockApi": false
+}
+```
+
+Or set:
 
 ```bash
-dotnet publish DeviceCertAgent.App/DeviceCertAgent.App.csproj \
-  -c Release -r win-x64 --self-contained true \
-  /p:PublishSingleFile=true -o publish
+set VERIFYTECH_API_BASE_URL=http://localhost:8000
 ```
 
-## Usage
+Mock offline UI:
 
 ```cmd
-DeviceCertAgent.exe
-DeviceCertAgent.exe --mode certify --api-url http://localhost:8000
-DeviceCertAgent.exe --mode verify --certificate-code XXXX-XXXX-XXXX --api-url http://localhost:8000
 DeviceCertAgent.exe --mock-api
+```
+
+## Secure scan flow
+
+1. `POST /api/scan-sessions/start` → `sessionId`, `nonce`, `expiresAt`
+2. Local diagnostic scan (basic or enhanced admin)
+3. `POST /api/scan-sessions/{sessionId}/submit` → certificate + report URL
+
+The server validates nonce, expiry, single-use session, scan timing, and hardware fingerprint.
+
+## Promote release
+
+```bash
+python scripts/upload_agent.py --version 1.0.0 --notes "VerifyTech Agent WPF + scan sessions"
+```
+
+Apply `database/schema.sql` (includes `scan_sessions` table) in Supabase before deploying the API.
+
+## Code signing
+
+Sign the published executable before distribution:
+
+```powershell
+signtool sign /fd SHA256 /a publish\DeviceCertAgent.exe
 ```

@@ -227,11 +227,41 @@ CREATE TABLE audit_logs (
 CREATE INDEX idx_audit_logs_tenant_id ON audit_logs(tenant_id);
 CREATE INDEX idx_audit_logs_resource ON audit_logs(resource_type, resource_id);
 
+-- ─── Agent scan sessions (short-lived, nonce-bound) ───────────────────────
+CREATE TYPE scan_session_status AS ENUM ('started', 'submitted', 'expired', 'rejected');
+
+CREATE TABLE scan_sessions (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    session_id TEXT NOT NULL UNIQUE,
+    nonce TEXT NOT NULL,
+    platform TEXT NOT NULL DEFAULT 'windows',
+    agent_version TEXT NOT NULL,
+    build_channel TEXT NOT NULL DEFAULT 'production',
+    status scan_session_status NOT NULL DEFAULT 'started',
+    expires_at TIMESTAMPTZ NOT NULL,
+    submitted_at TIMESTAMPTZ,
+    admin_mode BOOLEAN,
+    scan_started_at TIMESTAMPTZ,
+    scan_completed_at TIMESTAMPTZ,
+    hardware_fingerprint TEXT,
+    scan_data_json JSONB,
+    certificate_id UUID REFERENCES certificates(id) ON DELETE SET NULL,
+    certificate_code TEXT,
+    report_url TEXT,
+    verification_url TEXT,
+    qr_code_url TEXT,
+    rejection_reason TEXT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX idx_scan_sessions_status ON scan_sessions(status);
+CREATE INDEX idx_scan_sessions_expires_at ON scan_sessions(expires_at);
+
 -- ─── Seed default Windows agent placeholder ───────────────────────────────
 INSERT INTO agent_versions (platform, version, download_url, checksum, is_active, release_notes)
 VALUES (
     'windows',
-    '0.1.0',
+    '1.0.0',
     'windows/0.1.0/DeviceCertAgent.exe',
     'sha256:placeholder-checksum-replace-on-release',
     TRUE,
@@ -247,6 +277,7 @@ ALTER TABLE device_reports ENABLE ROW LEVEL SECURITY;
 ALTER TABLE certificates ENABLE ROW LEVEL SECURITY;
 ALTER TABLE verification_attempts ENABLE ROW LEVEL SECURITY;
 ALTER TABLE intake_responses ENABLE ROW LEVEL SECURITY;
+ALTER TABLE scan_sessions ENABLE ROW LEVEL SECURITY;
 
 -- Public read on active certificates via certificate_code (handled by backend API)
 -- Service role used by backend-api for all writes

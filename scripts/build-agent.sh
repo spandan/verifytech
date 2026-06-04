@@ -38,7 +38,8 @@ if [[ "$(uname -s)" != "MINGW"* && "$(uname -s)" != "MSYS"* && "$(uname -s)" != 
   exit 0
 fi
 
-echo "Publishing WPF desktop app (win-x64)..."
+CHANNEL="${VERIFYTECH_BUILD_CHANNEL:-production}"
+echo "Publishing WPF desktop app (win-x64, channel=${CHANNEL})..."
 dotnet publish DeviceCertAgent.App/DeviceCertAgent.App.csproj \
   -c Release \
   -r win-x64 \
@@ -46,6 +47,7 @@ dotnet publish DeviceCertAgent.App/DeviceCertAgent.App.csproj \
   /p:PublishSingleFile=true \
   /p:IncludeNativeLibrariesForSelfExtract=true \
   /p:EnableCompressionInSingleFile=true \
+  /p:VerifyTechBuildChannel="${CHANNEL}" \
   -o publish
 
 echo ""

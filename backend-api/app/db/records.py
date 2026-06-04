@@ -298,6 +298,55 @@ class CertificateEvent:
 
 
 @dataclass
+class ScanSession:
+    id: str
+    session_id: str
+    nonce: str
+    platform: str
+    agent_version: str
+    build_channel: str
+    status: str
+    expires_at: datetime | None = None
+    submitted_at: datetime | None = None
+    admin_mode: bool | None = None
+    scan_started_at: datetime | None = None
+    scan_completed_at: datetime | None = None
+    hardware_fingerprint: str | None = None
+    certificate_id: str | None = None
+    certificate_code: str | None = None
+    report_url: str | None = None
+    verification_url: str | None = None
+    qr_code_url: str | None = None
+    rejection_reason: str | None = None
+    created_at: datetime | None = None
+
+    @classmethod
+    def from_row(cls, row: dict[str, Any]) -> ScanSession:
+        return cls(
+            id=str(row["id"]),
+            session_id=row["session_id"],
+            nonce=row["nonce"],
+            platform=row.get("platform", "windows"),
+            agent_version=row["agent_version"],
+            build_channel=row.get("build_channel", "production"),
+            status=row.get("status", "started"),
+            expires_at=_parse_dt(row.get("expires_at")),
+            submitted_at=_parse_dt(row.get("submitted_at")),
+            admin_mode=row.get("admin_mode"),
+            scan_started_at=_parse_dt(row.get("scan_started_at")),
+            scan_completed_at=_parse_dt(row.get("scan_completed_at")),
+            hardware_fingerprint=row.get("hardware_fingerprint"),
+            certificate_id=row.get("certificate_id"),
+            certificate_code=row.get("certificate_code"),
+            report_url=row.get("report_url"),
+            verification_url=row.get("verification_url"),
+            qr_code_url=row.get("qr_code_url"),
+            rejection_reason=row.get("rejection_reason"),
+            created_at=_parse_dt(row.get("created_at")),
+        )
+
+
+@dataclass
 class AuditLog:
     id: str
     action: str

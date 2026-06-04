@@ -5,7 +5,17 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, PlainTextResponse
 
-from app.api.routes import agents, auth_profile, certificates, dashboard, intake, reports, tenants, verify
+from app.api.routes import (
+    agents,
+    auth_profile,
+    certificates,
+    dashboard,
+    intake,
+    reports,
+    scan_sessions,
+    tenants,
+    verify,
+)
 from app.config import settings
 from app.db.models import init_db
 
@@ -36,6 +46,7 @@ app.add_middleware(
 app.include_router(intake.router)
 app.include_router(agents.router)
 app.include_router(reports.router)
+app.include_router(scan_sessions.router)
 app.include_router(certificates.router)
 app.include_router(verify.router)
 app.include_router(dashboard.router)

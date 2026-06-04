@@ -128,6 +128,40 @@ class CertificateLookupResponse(BaseModel):
     expires_at: Optional[datetime] = None
 
 
+# ─── Scan sessions (Windows agent) ────────────────────────────────────────────
+
+class ScanSessionStartRequest(BaseModel):
+    agent_version: str = Field(min_length=1, max_length=32)
+    platform: str = "windows"
+    build_channel: str = "production"
+
+
+class ScanSessionStartResponse(BaseModel):
+    session_id: str
+    nonce: str
+    expires_at: datetime
+
+
+class ScanSessionSubmitRequest(BaseModel):
+    session_id: str
+    nonce: str
+    agent_version: str
+    platform: str = "windows"
+    scan_started_at: datetime
+    scan_completed_at: datetime
+    admin_mode: bool = False
+    hardware_fingerprint: str = Field(min_length=16, max_length=128)
+    scan_data: dict[str, Any]
+
+
+class ScanSessionSubmitResponse(BaseModel):
+    certificate_id: str
+    certificate_code: str
+    report_url: str
+    verification_url: Optional[str] = None
+    qr_code_url: Optional[str] = None
+
+
 # ─── Verification ─────────────────────────────────────────────────────────────
 
 class VerifyLookupRequest(BaseModel):

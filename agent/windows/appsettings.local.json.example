@@ -1,5 +1,5 @@
 {
   "apiBaseUrl": "http://localhost:8000",
-  "environment": "local",
+  "environment": "development",
   "mockApi": false
 }

@@ -2,219 +2,213 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:conv="clr-namespace:DeviceCertAgent.App.Converters"
-        Title="Device Certification Agent"
-        Width="920" Height="700" MinWidth="800" MinHeight="620"
+        Title="VerifyTech Agent"
+        Width="960" Height="720" MinWidth="840" MinHeight="640"
         Background="{StaticResource BackgroundBrush}"
         WindowStartupLocation="CenterScreen">
   <Window.Resources>
     <conv:PageVisibilityConverter x:Key="PageVis"/>
     <conv:StepStatusIconConverter x:Key="StepIcon"/>
     <conv:BoolVisConverter x:Key="BoolVis"/>
+    <conv:DevVisibilityConverter x:Key="DevVis"/>
   </Window.Resources>
 
-  <Grid Margin="24">
+  <Grid Margin="28">
     <Grid.RowDefinitions>
       <RowDefinition Height="Auto"/>
       <RowDefinition Height="*"/>
       <RowDefinition Height="Auto"/>
     </Grid.RowDefinitions>
 
-    <!-- Header -->
-    <StackPanel Grid.Row="0" Margin="0,0,0,20">
+    <StackPanel Grid.Row="0" Margin="0,0,0,24">
       <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-        <Border Width="40" Height="40" CornerRadius="8" Background="{StaticResource AccentBrush}" Margin="0,0,12,0">
-          <TextBlock Text="DP" Foreground="White" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+        <Border Width="44" Height="44" CornerRadius="10" Background="{StaticResource AccentBrush}" Margin="0,0,14,0">
+          <TextBlock Text="VT" Foreground="White" FontWeight="Bold" FontSize="16"
+                     HorizontalAlignment="Center" VerticalAlignment="Center"/>
         </Border>
         <StackPanel>
-          <TextBlock Text="Device Certification Agent" FontSize="18" FontWeight="SemiBold" Foreground="{StaticResource TextPrimaryBrush}"/>
-          <TextBlock Text="{Binding ApiEndpointDisplay}" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}"/>
+          <TextBlock Text="VerifyTech Agent" FontSize="20" FontWeight="SemiBold" Foreground="{StaticResource TextPrimaryBrush}"/>
+          <TextBlock Text="{Binding BrandSubtitle}" FontSize="13" Foreground="{StaticResource TextSecondaryBrush}"/>
+          <TextBlock Text="{Binding DeveloperEndpointLabel}" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}"
+                     Visibility="{Binding ShowDeveloperUi, Converter={StaticResource DevVis}}" Margin="0,4,0,0"/>
         </StackPanel>
       </StackPanel>
     </StackPanel>
 
-    <!-- Content -->
     <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
-      <Grid MaxWidth="760">
+      <Grid MaxWidth="780">
 
         <!-- 1 Welcome -->
         <StackPanel Visibility="{Binding CurrentPage, Converter={StaticResource PageVis}, ConverterParameter=Welcome}">
-          <TextBlock Text="Certify or verify this device" Style="{StaticResource PageTitle}" Margin="0,0,0,8"/>
-          <TextBlock Style="{StaticResource BodyText}" Margin="0,0,0,24"
-                     Text="Use hardware identity, condition checks, and secure reporting to create or verify a trusted device certificate."/>
-          <UniformGrid Columns="2" Margin="0,0,0,16">
-            <Border Style="{StaticResource CardBorder}" Margin="0,0,8,0">
-              <StackPanel>
-                <TextBlock Text="Certify this device" FontWeight="SemiBold" FontSize="16" Foreground="{StaticResource TextPrimaryBrush}"/>
-                <TextBlock Style="{StaticResource BodyText}" Margin="0,8,0,16" Text="Scan this device and generate a trusted certificate."/>
-                <Button Content="Start certification" Style="{StaticResource AccentButton}" Command="{Binding StartCertifyCommand}"/>
-              </StackPanel>
-            </Border>
-            <Border Style="{StaticResource CardBorder}" Margin="8,0,0,0">
-              <StackPanel>
-                <TextBlock Text="Verify certificate" FontWeight="SemiBold" FontSize="16" Foreground="{StaticResource TextPrimaryBrush}"/>
-                <TextBlock Style="{StaticResource BodyText}" Margin="0,8,0,12" Text="Check whether this device matches an existing certificate."/>
-                <TextBox Style="{StaticResource TextBoxStyle}" Margin="0,0,0,12" Text="{Binding CertificateCode, UpdateSourceTrigger=PropertyChanged}"
-                         Tag="Certificate code (XXXX-XXXX-XXXX)"/>
-                <Button Content="Verify certificate" Style="{StaticResource PrimaryButton}" Command="{Binding StartVerifyCommand}"/>
-              </StackPanel>
-            </Border>
-          </UniformGrid>
+          <TextBlock Text="Certify this device" Style="{StaticResource PageTitle}" Margin="0,0,0,10"/>
+          <TextBlock Style="{StaticResource BodyText}" Margin="0,0,0,28"
+                     Text="Run a secure hardware diagnostic and receive a trusted certificate backed by VerifyTech — ideal for resale, trade-in, and refurbishment."/>
+          <Border Style="{StaticResource HeroCardBorder}" Margin="0,0,0,24">
+            <StackPanel>
+              <TextBlock Text="What you get" FontWeight="SemiBold" FontSize="15" Foreground="{StaticResource TextPrimaryBrush}"/>
+              <TextBlock Style="{StaticResource BodyText}" Margin="0,10,0,0" Text="• Hardware identity and condition snapshot"/>
+              <TextBlock Style="{StaticResource BodyText}" Text="• Server-signed certificate (not created on this PC)"/>
+              <TextBlock Style="{StaticResource BodyText}" Text="• Shareable report link and certificate code"/>
+              <TextBlock Style="{StaticResource BodyText}" Margin="0,8,0,0" Foreground="{StaticResource AccentBrush}"
+                         Text="No personal files, photos, or browsing data are collected."/>
+            </StackPanel>
+          </Border>
+          <Button Content="Start certification" Style="{StaticResource AccentButton}" Command="{Binding BeginCertificationCommand}" HorizontalAlignment="Left"/>
         </StackPanel>
 
-        <!-- 2 Privacy -->
-        <StackPanel Visibility="{Binding CurrentPage, Converter={StaticResource PageVis}, ConverterParameter=Privacy}">
-          <TextBlock Text="Your privacy matters" Style="{StaticResource PageTitle}" Margin="0,0,0,12"/>
+        <!-- 2 Disclosure -->
+        <StackPanel Visibility="{Binding CurrentPage, Converter={StaticResource PageVis}, ConverterParameter=Disclosure}">
+          <TextBlock Text="What we collect" Style="{StaticResource PageTitle}" Margin="0,0,0,12"/>
           <Border Style="{StaticResource CardBorder}" Margin="0,0,0,20">
             <StackPanel>
-              <TextBlock Style="{StaticResource BodyText}" Text="We collect hardware identity, specs, battery, storage, and readiness checks to certify your device."/>
-              <TextBlock Style="{StaticResource BodyText}" Margin="0,12,0,0"
-                         Text="We do not collect files, documents, browser history, passwords, emails, photos, or personal content."/>
-              <TextBlock Style="{StaticResource BodyText}" Margin="0,12,0,0"
-                         Text="Sensitive identifiers are hashed on your device before anything is sent."/>
-              <TextBlock Style="{StaticResource BodyText}" Margin="0,12,0,0" FontWeight="SemiBold" Foreground="{StaticResource AccentBrush}"
-                         Text="The standard scan does not require administrator access."/>
+              <TextBlock Style="{StaticResource BodyText}" Text="To certify your device we collect hardware specifications and health signals only:"/>
+              <TextBlock Style="{StaticResource BodyText}" Margin="0,10,0,0" Text="• CPU, memory, storage, battery, and graphics"/>
+              <TextBlock Style="{StaticResource BodyText}" Text="• BIOS / motherboard identifiers (hashed on this device)"/>
+              <TextBlock Style="{StaticResource BodyText}" Text="• OS version, Secure Boot, and TPM status when available"/>
+              <TextBlock Style="{StaticResource BodyText}" Margin="0,12,0,0" FontWeight="SemiBold"
+                         Text="We never collect documents, passwords, emails, photos, or browsing history."/>
             </StackPanel>
           </Border>
           <StackPanel Orientation="Horizontal">
-            <Button Content="Continue to scan" Style="{StaticResource AccentButton}" Command="{Binding ContinueToScanCommand}" Margin="0,0,8,0"/>
+            <Button Content="I understand — continue" Style="{StaticResource AccentButton}" Command="{Binding ContinueFromDisclosureCommand}" Margin="0,0,10,0"/>
             <Button Content="Cancel" Style="{StaticResource SecondaryButton}" Command="{Binding CancelCommand}"/>
           </StackPanel>
         </StackPanel>
 
-        <!-- 3 Standard Scan -->
-        <StackPanel Visibility="{Binding CurrentPage, Converter={StaticResource PageVis}, ConverterParameter=StandardScan}">
+        <!-- 3 Permission -->
+        <StackPanel Visibility="{Binding CurrentPage, Converter={StaticResource PageVis}, ConverterParameter=Permission}">
+          <TextBlock Text="Choose scan level" Style="{StaticResource PageTitle}" Margin="0,0,0,12"/>
+          <TextBlock Style="{StaticResource BodyText}" Margin="0,0,0,20"
+                     Text="A basic scan works without administrator rights. Enhanced scan adds deeper storage and security diagnostics."/>
+          <UniformGrid Columns="2" Margin="0,0,0,16">
+            <Border Style="{StaticResource CardBorder}" Margin="0,0,10,0">
+              <StackPanel>
+                <TextBlock Text="Basic scan" FontWeight="SemiBold" FontSize="16" Foreground="{StaticResource TextPrimaryBrush}"/>
+                <TextBlock Style="{StaticResource BodyText}" Margin="0,10,0,16"
+                           Text="Recommended for most users. No admin rights required."/>
+                <Button Content="Run basic scan" Style="{StaticResource PrimaryButton}" Command="{Binding ChooseBasicScanCommand}"/>
+              </StackPanel>
+            </Border>
+            <Border Style="{StaticResource CardBorder}" Margin="10,0,0,0">
+              <StackPanel>
+                <TextBlock Text="Enhanced scan" FontWeight="SemiBold" FontSize="16" Foreground="{StaticResource TextPrimaryBrush}"/>
+                <TextBlock Style="{StaticResource BodyText}" Margin="0,10,0,16"
+                           Text="SMART storage health, deeper firmware and security checks. May request admin access."/>
+                <Button Content="Run enhanced scan" Style="{StaticResource AccentButton}" Command="{Binding ChooseEnhancedScanCommand}"/>
+              </StackPanel>
+            </Border>
+          </UniformGrid>
+          <TextBlock Text="{Binding ErrorMessage}" Foreground="{StaticResource ErrorBrush}" Visibility="{Binding HasError, Converter={StaticResource BoolVis}}"/>
+        </StackPanel>
+
+        <!-- 4 Scan progress -->
+        <StackPanel Visibility="{Binding CurrentPage, Converter={StaticResource PageVis}, ConverterParameter=ScanProgress}">
           <TextBlock Text="Scanning your device" Style="{StaticResource PageTitle}" Margin="0,0,0,8"/>
-          <TextBlock Style="{StaticResource BodyText}" Text="This usually takes a few minutes. You can keep this window open while we work."/>
-          <ProgressBar Height="8" Margin="0,20,0,8" Maximum="100" Value="{Binding ScanProgress}" Foreground="{StaticResource AccentBrush}"/>
-          <TextBlock Text="{Binding StatusMessage}" Foreground="{StaticResource AccentBrush}" Margin="0,0,0,16"/>
+          <TextBlock Style="{StaticResource BodyText}" Text="Please keep this window open. This usually takes one to three minutes."/>
+          <ProgressBar Height="10" Margin="0,22,0,10" Maximum="100" Value="{Binding ScanProgress}"
+                       Foreground="{StaticResource AccentBrush}" Background="{StaticResource SurfaceMutedBrush}"/>
+          <TextBlock Text="{Binding StatusMessage}" Foreground="{StaticResource AccentBrush}" FontWeight="SemiBold" Margin="0,0,0,18"/>
           <ItemsControl ItemsSource="{Binding ScanSteps}">
+            <ItemsControl.ItemsPanel>
+              <ItemsPanelTemplate>
+                <UniformGrid Columns="3"/>
+              </ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
             <ItemsControl.ItemTemplate>
               <DataTemplate>
-                <Border Style="{StaticResource CardBorder}" Margin="0,0,0,8" Padding="14">
-                  <Grid>
-                    <Grid.ColumnDefinitions>
-                      <ColumnDefinition Width="32"/>
-                      <ColumnDefinition Width="*"/>
-                    </Grid.ColumnDefinitions>
-                    <TextBlock Text="{Binding Status, Converter={StaticResource StepIcon}}" FontWeight="Bold" VerticalAlignment="Center"/>
-                    <TextBlock Grid.Column="1" Text="{Binding Title}" FontSize="14" Foreground="{StaticResource TextPrimaryBrush}"/>
-                  </Grid>
+                <Border Style="{StaticResource StepCardBorder}" Margin="4">
+                  <StackPanel>
+                    <TextBlock Text="{Binding Status, Converter={StaticResource StepIcon}}" FontSize="18" FontWeight="Bold"
+                               Foreground="{StaticResource AccentBrush}"/>
+                    <TextBlock Text="{Binding Title}" FontSize="13" FontWeight="SemiBold" Margin="0,6,0,0"
+                               Foreground="{StaticResource TextPrimaryBrush}"/>
+                    <TextBlock Text="{Binding Detail}" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}"/>
+                  </StackPanel>
                 </Border>
               </DataTemplate>
             </ItemsControl.ItemTemplate>
           </ItemsControl>
-          <Button Content="View technical details" Style="{StaticResource SecondaryButton}" Margin="0,12,0,0"
-                  Command="{Binding ToggleTechnicalDetailsCommand}"/>
-          <TextBox Text="{Binding TechnicalDetails}" Visibility="{Binding ShowTechnicalDetails, Converter={StaticResource BoolVis}}"
-                   Margin="0,8,0,0" Height="120" TextWrapping="Wrap" IsReadOnly="True" Style="{StaticResource TextBoxStyle}"/>
         </StackPanel>
 
-        <!-- 4 Enhanced Offer -->
-        <StackPanel Visibility="{Binding CurrentPage, Converter={StaticResource PageVis}, ConverterParameter=EnhancedOffer}">
-          <TextBlock Text="Standard scan complete" Style="{StaticResource PageTitle}" Margin="0,0,0,12"/>
-          <Border Style="{StaticResource CardBorder}" Margin="0,0,0,20">
-            <StackPanel>
-              <TextBlock Style="{StaticResource BodyText}"
-                         Text="We collected enough information to create a certificate. You can optionally run an enhanced scan for deeper diagnostics."/>
-              <TextBlock Style="{StaticResource BodyText}" Margin="0,12,0,0" Text="Enhanced scan may collect: storage SMART health, advanced firmware/security status, and deeper diagnostics."/>
-              <TextBlock Style="{StaticResource BodyText}" Margin="0,12,0,0" FontWeight="SemiBold"
-                         Text="Enhanced scan may ask for administrator permission. You can safely skip this."/>
-            </StackPanel>
+        <!-- 5 Result preview -->
+        <StackPanel Visibility="{Binding CurrentPage, Converter={StaticResource PageVis}, ConverterParameter=ResultPreview}">
+          <TextBlock Text="Scan results" Style="{StaticResource PageTitle}" Margin="0,0,0,16"/>
+          <Border Style="{StaticResource CardBorder}" Margin="0,0,0,20" DataContext="{Binding Summary}">
+            <Grid>
+              <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="*"/>
+              </Grid.ColumnDefinitions>
+              <StackPanel Grid.Column="0" Margin="0,0,12,0">
+                <TextBlock Text="{Binding DeviceName, StringFormat=Device: {0}}" FontWeight="SemiBold"/>
+                <TextBlock Style="{StaticResource BodyText}" Text="{Binding OsVersion, StringFormat=OS: {0}}"/>
+                <TextBlock Style="{StaticResource BodyText}" Text="{Binding Cpu, StringFormat=CPU: {0}}"/>
+                <TextBlock Style="{StaticResource BodyText}" Text="{Binding Ram, StringFormat=RAM: {0}}"/>
+                <TextBlock Style="{StaticResource BodyText}" Text="{Binding Storage, StringFormat=Storage: {0}}"/>
+              </StackPanel>
+              <StackPanel Grid.Column="1">
+                <TextBlock Style="{StaticResource BodyText}" Text="{Binding Battery, StringFormat=Battery: {0}}"/>
+                <TextBlock Style="{StaticResource BodyText}" Text="{Binding StorageHealth, StringFormat=Storage health: {0}}"/>
+                <TextBlock Style="{StaticResource BodyText}" Text="{Binding CoreChecks, StringFormat=Checks: {0}}"/>
+                <TextBlock Style="{StaticResource BodyText}" Text="{Binding ScanType, StringFormat=Scan: {0}}"/>
+                <TextBlock Foreground="{StaticResource AccentBrush}" Margin="0,8,0,0"
+                           Text="{Binding CompletenessPercent, StringFormat=Completeness: {0:F0}%}"/>
+              </StackPanel>
+            </Grid>
           </Border>
           <StackPanel Orientation="Horizontal">
-            <Button Content="Run enhanced scan" Style="{StaticResource AccentButton}" Command="{Binding RunEnhancedCommand}" Margin="0,0,8,0"/>
-            <Button Content="Skip and continue" Style="{StaticResource PrimaryButton}" Command="{Binding SkipEnhancedCommand}"/>
+            <Button Content="Submit for certificate" Style="{StaticResource AccentButton}" Command="{Binding SubmitCertificationCommand}" Margin="0,0,10,0"/>
+            <Button Content="Start over" Style="{StaticResource SecondaryButton}" Command="{Binding BackToWelcomeCommand}"/>
           </StackPanel>
         </StackPanel>
 
-        <!-- 5 Enhanced Scan -->
-        <StackPanel Visibility="{Binding CurrentPage, Converter={StaticResource PageVis}, ConverterParameter=EnhancedScan}">
-          <TextBlock Text="Enhanced diagnostics" Style="{StaticResource PageTitle}" Margin="0,0,0,12"/>
-          <Border Style="{StaticResource CardBorder}">
-            <TextBlock Style="{StaticResource BodyText}" Text="{Binding StatusMessage}"/>
-          </Border>
+        <!-- 6 Submitting -->
+        <StackPanel Visibility="{Binding CurrentPage, Converter={StaticResource PageVis}, ConverterParameter=Submitting}"
+                    HorizontalAlignment="Center" VerticalAlignment="Center">
+          <TextBlock Text="Creating your certificate" Style="{StaticResource PageTitle}" HorizontalAlignment="Center"/>
+          <TextBlock Style="{StaticResource BodyText}" Margin="0,16,0,0" HorizontalAlignment="Center" Text="{Binding SubmissionStatus}"/>
         </StackPanel>
 
-        <!-- 6 Summary -->
-        <StackPanel Visibility="{Binding CurrentPage, Converter={StaticResource PageVis}, ConverterParameter=Summary}">
-          <TextBlock Text="Scan summary" Style="{StaticResource PageTitle}" Margin="0,0,0,16"/>
-          <Border Style="{StaticResource CardBorder}" Margin="0,0,0,20">
-            <StackPanel DataContext="{Binding Summary}">
-              <TextBlock Text="{Binding DeviceName, StringFormat=Device: {0}}" FontWeight="SemiBold" Foreground="{StaticResource TextPrimaryBrush}"/>
-              <TextBlock Style="{StaticResource BodyText}" Margin="0,8,0,0" Text="{Binding OsVersion, StringFormat=OS: {0}}"/>
-              <TextBlock Style="{StaticResource BodyText}" Text="{Binding Cpu, StringFormat=CPU: {0}}"/>
-              <TextBlock Style="{StaticResource BodyText}" Text="{Binding Ram, StringFormat=RAM: {0}}"/>
-              <TextBlock Style="{StaticResource BodyText}" Text="{Binding Storage, StringFormat=Storage: {0}}"/>
-              <TextBlock Style="{StaticResource BodyText}" Text="{Binding Battery, StringFormat=Battery: {0}}"/>
-              <TextBlock Style="{StaticResource BodyText}" Text="{Binding CoreChecks, StringFormat=Core checks: {0}}"/>
-              <TextBlock Style="{StaticResource BodyText}" Text="{Binding ScanType, StringFormat=Scan type: {0}}"/>
-              <TextBlock Style="{StaticResource BodyText}" Margin="0,8,0,0" Foreground="{StaticResource AccentBrush}"
-                         Text="{Binding CompletenessPercent, StringFormat=Scan completeness: {0}%}"/>
-            </StackPanel>
-          </Border>
-          <StackPanel Orientation="Horizontal">
-            <Button Content="Submit securely" Style="{StaticResource AccentButton}" Command="{Binding SubmitSecurelyCommand}" Margin="0,0,8,0"/>
-            <Button Content="Back" Style="{StaticResource SecondaryButton}" Command="{Binding BackToWelcomeCommand}"/>
-          </StackPanel>
-        </StackPanel>
-
-        <!-- 7 Submission -->
-        <StackPanel Visibility="{Binding CurrentPage, Converter={StaticResource PageVis}, ConverterParameter=Submission}" HorizontalAlignment="Center" VerticalAlignment="Center">
-          <TextBlock Text="Submitting securely" Style="{StaticResource PageTitle}" HorizontalAlignment="Center"/>
-          <TextBlock Style="{StaticResource BodyText}" Margin="0,12,0,0" HorizontalAlignment="Center" Text="{Binding SubmissionStatus}"/>
-        </StackPanel>
-
-        <!-- 8 Cert Success -->
-        <StackPanel Visibility="{Binding CurrentPage, Converter={StaticResource PageVis}, ConverterParameter=CertSuccess}">
-          <Border Background="#DCFCE7" CornerRadius="12" Padding="24" Margin="0,0,0,20">
+        <!-- 7 Certificate success -->
+        <StackPanel Visibility="{Binding CurrentPage, Converter={StaticResource PageVis}, ConverterParameter=CertificateSuccess}">
+          <Border Background="#E6F4F1" CornerRadius="14" Padding="28" Margin="0,0,0,24">
             <StackPanel HorizontalAlignment="Center">
-              <TextBlock Text="Certified" FontSize="28" FontWeight="SemiBold" Foreground="{StaticResource SuccessBrush}" HorizontalAlignment="Center"/>
-              <TextBlock Text="{Binding CertResult.CertificateCode}" FontSize="20" FontFamily="Consolas" Margin="0,12,0,0" HorizontalAlignment="Center"/>
-              <TextBlock Style="{StaticResource BodyText}" Margin="0,8,0,0" HorizontalAlignment="Center"
-                         Text="{Binding CertResult.CertificateLevel, StringFormat=Level: {0}}"/>
+              <TextBlock Text="Certified" FontSize="30" FontWeight="SemiBold" Foreground="{StaticResource AccentBrush}" HorizontalAlignment="Center"/>
+              <TextBlock Text="{Binding CertResult.CertificateCode}" FontSize="22" FontFamily="Consolas" Margin="0,14,0,0" HorizontalAlignment="Center"/>
+              <TextBlock Style="{StaticResource BodyText}" Margin="0,10,0,0" HorizontalAlignment="Center"
+                         Text="Your certificate was signed by VerifyTech."/>
             </StackPanel>
           </Border>
           <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
             <Button Content="Copy code" Style="{StaticResource SecondaryButton}" Command="{Binding CopyCertificateCodeCommand}" Margin="4"/>
-            <Button Content="Copy link" Style="{StaticResource SecondaryButton}" Command="{Binding CopyCertificateLinkCommand}" Margin="4"/>
-            <Button Content="Open certificate" Style="{StaticResource PrimaryButton}" Command="{Binding OpenCertificateCommand}" Margin="4"/>
+            <Button Content="Copy report link" Style="{StaticResource SecondaryButton}" Command="{Binding CopyReportLinkCommand}" Margin="4"/>
+            <Button Content="Open report" Style="{StaticResource PrimaryButton}" Command="{Binding OpenReportCommand}" Margin="4"/>
           </StackPanel>
-          <Button Content="Finish" Style="{StaticResource AccentButton}" Command="{Binding FinishCommand}" Margin="0,20,0,0" HorizontalAlignment="Center"/>
-          <Button Content="Remove local scan cache" Style="{StaticResource SecondaryButton}" Command="{Binding ClearLocalCacheCommand}" Margin="0,12,0,0" HorizontalAlignment="Center"/>
+          <Button Content="Done" Style="{StaticResource AccentButton}" Command="{Binding FinishCertificateCommand}" Margin="0,24,0,0" HorizontalAlignment="Center"/>
         </StackPanel>
 
-        <!-- 9 Verify Result -->
-        <StackPanel Visibility="{Binding CurrentPage, Converter={StaticResource PageVis}, ConverterParameter=VerifyResult}">
-          <Border CornerRadius="12" Padding="24" Margin="0,0,0,20" Background="{StaticResource SurfaceMutedBrush}">
-            <StackPanel HorizontalAlignment="Center">
-              <TextBlock Text="{Binding ResultTitle}" FontSize="24" FontWeight="SemiBold" HorizontalAlignment="Center"
-                         Foreground="{StaticResource TextPrimaryBrush}"/>
-              <TextBlock Style="{StaticResource BodyText}" Margin="0,12,0,0" HorizontalAlignment="Center" Text="{Binding ResultMessage}"/>
-            </StackPanel>
-          </Border>
-          <ItemsControl ItemsSource="{Binding ChangedComponents}" Margin="0,0,0,16"/>
-          <Button Content="Continue" Style="{StaticResource AccentButton}" Command="{Binding FinishCommand}" HorizontalAlignment="Center"/>
-        </StackPanel>
-
-        <!-- 10 Final -->
-        <StackPanel Visibility="{Binding CurrentPage, Converter={StaticResource PageVis}, ConverterParameter=Final}">
-          <TextBlock Text="Thank you" Style="{StaticResource PageTitle}" Margin="0,0,0,12"/>
+        <!-- 8 Uninstall prompt -->
+        <StackPanel Visibility="{Binding CurrentPage, Converter={StaticResource PageVis}, ConverterParameter=UninstallPrompt}">
+          <TextBlock Text="All set" Style="{StaticResource PageTitle}" Margin="0,0,0,12"/>
           <Border Style="{StaticResource CardBorder}" Margin="0,0,0,20">
             <StackPanel>
-              <TextBlock Style="{StaticResource BodyText}" Text="You can keep this app installed for future certifications or verifications."/>
-              <TextBlock Style="{StaticResource BodyText}" Margin="0,12,0,0" Text="To uninstall later, use Windows Settings → Apps → Device Certification Agent."/>
+              <TextBlock Style="{StaticResource BodyText}"
+                         Text="You can keep VerifyTech Agent installed for future certifications, or remove it now."/>
+              <TextBlock Style="{StaticResource BodyText}" Margin="0,12,0,0"
+                         Text="To uninstall later: Windows Settings → Apps → VerifyTech Agent."/>
             </StackPanel>
           </Border>
           <StackPanel Orientation="Horizontal">
-            <Button Content="Remove local scan files" Style="{StaticResource SecondaryButton}" Command="{Binding ClearLocalCacheCommand}" Margin="0,0,8,0"/>
-            <Button Content="Exit" Style="{StaticResource PrimaryButton}" Command="{Binding ExitAppCommand}"/>
+            <Button Content="Remove local scan cache" Style="{StaticResource SecondaryButton}" Command="{Binding ClearLocalCacheCommand}" Margin="0,0,10,0"/>
+            <Button Content="Keep installed &amp; exit" Style="{StaticResource AccentButton}" Command="{Binding KeepInstalledCommand}" Margin="0,0,10,0"/>
+            <Button Content="Exit" Style="{StaticResource SecondaryButton}" Command="{Binding ExitAppCommand}"/>
           </StackPanel>
         </StackPanel>
 
       </Grid>
     </ScrollViewer>
 
-    <TextBlock Grid.Row="2" Text="DevicePassport · No personal files are scanned" FontSize="11"
-               Foreground="{StaticResource TextSecondaryBrush}" HorizontalAlignment="Center" Margin="0,16,0,0"/>
+    <TextBlock Grid.Row="2" Text="VerifyTech · Hardware diagnostics only · TLS encrypted"
+               FontSize="11" Foreground="{StaticResource TextSecondaryBrush}" HorizontalAlignment="Center" Margin="0,18,0,0"/>
   </Grid>
 </Window>

@@ -1,3 +1,5 @@
+using DeviceCertAgent.Core.Configuration;
+
 namespace DeviceCertAgent.Core.Models;
 
 public enum CollectorStatus
@@ -70,6 +72,19 @@ public sealed class EndpointSettings
     public string ApiBaseUrl { get; set; } = "https://api.yourdomain.com";
     public string Environment { get; set; } = "production";
     public bool MockApi { get; set; }
+}
+
+public sealed class AgentRuntimeSettings
+{
+    public string ApiBaseUrl { get; set; } = AgentConfig.ProductionApiBaseUrl;
+    public string AppEnv { get; set; } = AgentConfig.AppEnvProduction;
+    public string BuildChannel { get; set; } = AgentConfig.BuildChannelProduction;
+    public string AgentVersion { get; set; } = AgentConfig.AgentVersion;
+    public bool AllowEndpointOverride { get; set; }
+    public bool ShowDeveloperUi { get; set; }
+    public bool MockApi { get; set; }
+
+    public bool IsProduction => AppEnv == AgentConfig.AppEnvProduction;
 }
 
 public sealed class ScanSummary

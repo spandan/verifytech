@@ -29,3 +29,19 @@ public sealed class ApiErrorResponse
 {
     public string? Detail { get; set; }
 }
+
+public sealed class ScanSessionStartResponse
+{
+    public string SessionId { get; set; } = "";
+    public string Nonce { get; set; } = "";
+    public DateTime ExpiresAt { get; set; }
+}
+
+public sealed class ScanSessionSubmitResponse
+{
+    public string CertificateId { get; set; } = "";
+    public string CertificateCode { get; set; } = "";
+    public string ReportUrl { get; set; } = "";
+    public string? VerificationUrl { get; set; }
+    public string? QrCodeUrl { get; set; }
+}

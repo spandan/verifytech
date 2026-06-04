@@ -18,6 +18,7 @@ from app.db.records import (
     Profile,
     Tenant,
     TenantUser,
+    ScanSession,
     VerificationAttempt,
 )
 from app.db.supabase_client import get_supabase_admin
@@ -248,6 +249,20 @@ class Database:
     def get_intake(self, intake_id: str) -> IntakeResponse | None:
         row = self._first("intake_responses", id=intake_id)
         return IntakeResponse.from_row(row) if row else None
+
+    # ── Scan sessions ────────────────────────────────────────────────────────
+
+    def create_scan_session(self, payload: dict[str, Any]) -> ScanSession:
+        payload = {"id": str(uuid4()), **payload}
+        row = self._insert("scan_sessions", payload)
+        return ScanSession.from_row(row)
+
+    def get_scan_session(self, session_id: str) -> ScanSession | None:
+        row = self._first("scan_sessions", session_id=session_id)
+        return ScanSession.from_row(row) if row else None
+
+    def update_scan_session(self, session_id: str, updates: dict[str, Any]) -> None:
+        self.client.table("scan_sessions").update(updates).eq("session_id", session_id).execute()
 
     # ── Audit ────────────────────────────────────────────────────────────────
 

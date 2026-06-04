@@ -35,6 +35,15 @@ class Settings(BaseSettings):
     supabase_agent_filename: str = "DeviceCertAgent.exe"
     supabase_agent_signed_url_ttl_seconds: int = 3600
 
+    scan_session_ttl_minutes: int = 20
+    scan_session_min_duration_seconds: int = 5
+    scan_session_max_duration_hours: int = 2
+    allowed_agent_versions: str = "0.1.0,0.2.0,1.0.0"
+
+    @property
+    def allowed_agent_version_list(self) -> list[str]:
+        return [v.strip() for v in self.allowed_agent_versions.split(",") if v.strip()]
+
     @property
     def cors_origin_list(self) -> list[str]:
         return [o.strip() for o in self.cors_origins.split(",") if o.strip()]

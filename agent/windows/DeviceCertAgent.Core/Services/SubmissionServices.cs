@@ -38,7 +38,7 @@ public sealed class LocalCacheCleanupService
 {
     private static readonly string CacheDir = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-        "DevicePassport",
+        "VerifyTech",
         "AgentCache");
 
     public void SaveTemporaryReport(DeviceReport report)
@@ -99,9 +99,17 @@ public sealed class MockSubmissionService : ISubmissionService
 
 public static class SubmissionServiceFactory
 {
-    public static ISubmissionService Create(EndpointSettings settings)
+    public static ISubmissionService Create(AgentRuntimeSettings settings)
     {
         if (settings.MockApi) return new MockSubmissionService();
         return new HttpSubmissionService(settings.ApiBaseUrl);
     }
+
+    public static ISubmissionService Create(EndpointSettings settings) =>
+        Create(new AgentRuntimeSettings
+        {
+            ApiBaseUrl = settings.ApiBaseUrl,
+            AppEnv = settings.Environment,
+            MockApi = settings.MockApi,
+        });
 }
