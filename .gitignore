@@ -43,7 +43,7 @@ npm-debug.log*
 # Supabase
 .supabase/
 
-# Windows agent builds (upload to Supabase Storage instead)
-agent/windows/publish/
+# Windows agent build artifacts (keep published exe for distribution)
+agent/windows/publish/*.pdb
 agent/**/bin/
 agent/**/obj/
