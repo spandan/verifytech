@@ -1,0 +1,19 @@
+# DevicePassport API — Railway config
+#
+# Monorepo setup (repo root = build context):
+#   1. Connect this GitHub repo to Railway
+#   2. Do NOT set a Root Directory (Dockerfile copies packages/ + backend-api/)
+#   3. Settings → Config-as-code path: backend-api/railway.toml
+#   4. Add environment variables from backend-api/.env.example
+#   5. Set API_BASE_URL to your Railway public URL after first deploy
+
+[build]
+builder = "DOCKERFILE"
+dockerfilePath = "backend-api/Dockerfile"
+watchPatterns = ["backend-api/**", "packages/**"]
+
+[deploy]
+healthcheckPath = "/health"
+healthcheckTimeout = 300
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 10

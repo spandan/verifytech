@@ -1,0 +1,29 @@
+[project]
+name = "verification-engine"
+version = "0.1.0"
+description = "Compare live verification scan against certified report"
+requires-python = ">=3.11"
+dependencies = [
+    "pydantic>=2.0",
+    "schema-engine",
+    "devicepassport-shared",
+    "certificate-engine",
+]
+
+[tool.uv.sources]
+schema-engine = { path = "../schema-engine", editable = true }
+devicepassport-shared = { path = "../shared", editable = true }
+certificate-engine = { path = "../certificate-engine", editable = true }
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["verification_engine"]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

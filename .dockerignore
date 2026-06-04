@@ -1,0 +1,27 @@
+# Frontend apps (deployed separately on Vercel)
+frontend-public/
+frontend-dashboard/
+
+# Python local env
+.venv/
+**/__pycache__/
+**/*.pyc
+**/.pytest_cache/
+*.db
+
+# Node
+**/node_modules/
+**/.next/
+
+# Agent build artifacts (optional; exclude to keep image small)
+agent/
+
+# Git / IDE
+.git/
+.cursor/
+*.md
+!backend-api/**/*.md
+
+# Env secrets (set in Railway dashboard)
+**/.env
+**/.env.local

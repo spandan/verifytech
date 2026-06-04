@@ -1,0 +1,106 @@
+{
+  "schema_version": "1.0",
+  "platform": "windows",
+  "collection_context": {
+    "mode": "initial_certification",
+    "collector_version": "0.1.0",
+    "collected_at": "2026-06-03T18:30:00.0000000Z",
+    "certificate_code": null,
+    "intake_id": "sample-intake-id"
+  },
+  "tier1_certification_identity": {
+    "manufacturer": "Dell Inc.",
+    "model": "XPS 15 9520",
+    "device_type": "laptop",
+    "os_family": "windows",
+    "os_version": "Microsoft Windows 11 Pro (10.0.22631)",
+    "os_build": "22631",
+    "serial_number_hash": "a1b2c3d4e5f6789012345678901234567890abcdef1234567890abcdef123456",
+    "hardware_uuid_hash": "fedcba0987654321fedcba0987654321fedcba0987654321fedcba0987654321",
+    "motherboard_serial_hash": "aaaabbbbccccddddeeeeffffaaaabbbbccccddddeeeeffffaaaabbbbccccdddd",
+    "primary_storage_serial_hash": "1111222233334444555566667777888899990000aaaabbbbccccddddeeeeffff",
+    "cpu_model": "Intel(R) Core(TM) i7-12700H",
+    "ram_total_gb": 16,
+    "storage_total_gb": 512
+  },
+  "tier2_value_determination": {
+    "cpu": {
+      "model": "Intel(R) Core(TM) i7-12700H",
+      "core_count": 14,
+      "thread_count": 20
+    },
+    "memory": {
+      "total_gb": 16,
+      "details": "16GB @ 4800MHz"
+    },
+    "storage": [
+      {
+        "index": 0,
+        "drive_type": "NVMe",
+        "capacity_gb": 512,
+        "health_percent": null,
+        "smart_status": "unknown",
+        "serial_hash": "1111222233334444555566667777888899990000aaaabbbbccccddddeeeeffff"
+      }
+    ],
+    "battery": {
+      "present": true,
+      "design_capacity_mwh": 86000,
+      "full_charge_capacity_mwh": 74820,
+      "health_percent": 87,
+      "cycle_count": 142
+    },
+    "display": {
+      "resolution": "3840x2400",
+      "refresh_rate_hz": 60
+    },
+    "graphics": {
+      "gpu_model": "NVIDIA GeForce RTX 3050 Ti Laptop GPU",
+      "driver_version": "31.0.15.3742"
+    },
+    "functional_readiness": {
+      "camera_present": true,
+      "microphone_present": true,
+      "speaker_present": true,
+      "wifi_present": true,
+      "bluetooth_present": true,
+      "keyboard_present": true,
+      "touchpad_present": true,
+      "charging_status": "ac_power"
+    }
+  },
+  "tier3_optional_intelligence": {
+    "security": {
+      "tpm_present": true,
+      "tpm_version": "2.0, 0, 1.38",
+      "secure_boot_enabled": true,
+      "bitlocker_status": "fullyencrypted"
+    },
+    "firmware": {
+      "bios_version": "1.14.0",
+      "bios_date": "2024-03-15"
+    },
+    "network": {
+      "adapters": [
+        {
+          "name": "Intel(R) Wi-Fi 6 AX201 160MHz",
+          "type": "Ethernet 802.3",
+          "connected": true
+        }
+      ],
+      "port_summary": "usb_hubs:3"
+    },
+    "performance": {
+      "boot_time_seconds": 86400,
+      "pending_reboot": false
+    },
+    "software": {
+      "driver_issues": []
+    }
+  },
+  "agent_metadata": {
+    "machine_architecture": "x64",
+    "agent_runtime": ".NET 8",
+    "collection_warnings": []
+  }
+}

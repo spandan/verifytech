@@ -1,0 +1,35 @@
+[project]
+name = "devicepassport-api"
+version = "0.1.0"
+description = "DevicePassport backend API"
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi>=0.115.0",
+    "uvicorn[standard]>=0.32.0",
+    "pydantic>=2.0",
+    "pydantic-settings>=2.0",
+    "supabase>=2.0",
+    "python-multipart>=0.0.9",
+    "httpx>=0.27",
+    "schema-engine",
+    "certificate-engine",
+    "verification-engine",
+    "devicepassport-shared",
+]
+
+[tool.uv.sources]
+schema-engine = { path = "../packages/schema-engine", editable = true }
+certificate-engine = { path = "../packages/certificate-engine", editable = true }
+verification-engine = { path = "../packages/verification-engine", editable = true }
+devicepassport-shared = { path = "../packages/shared", editable = true }
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0", "pytest-asyncio>=0.24", "httpx>=0.27"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]

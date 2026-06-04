@@ -1,0 +1,202 @@
+from datetime import datetime
+from typing import Any, Optional
+
+from pydantic import BaseModel, Field
+
+
+# ─── Intake ───────────────────────────────────────────────────────────────────
+
+class IntakeCreateRequest(BaseModel):
+    device_category: str
+    approximate_purchase_year: int = Field(ge=1990, le=2030)
+    zip_code_or_region: str = Field(min_length=2, max_length=20)
+    charger_included: Optional[str] = None
+    tenant_id: Optional[str] = None
+
+
+class IntakeResponse(BaseModel):
+    id: str
+    device_category: str
+    approximate_purchase_year: int
+    zip_code_or_region: str
+    charger_included: Optional[str] = None
+    created_at: datetime
+
+
+# ─── Agents ───────────────────────────────────────────────────────────────────
+
+class AgentVersionResponse(BaseModel):
+    platform: str
+    version: str
+    download_url: str
+    checksum: str
+    release_notes: Optional[str] = None
+    minimum_supported_schema_version: str
+
+
+class AgentDownloadResponse(BaseModel):
+    platform: str
+    version: str
+    download_url: str
+    checksum: str
+    full_download_url: str
+
+
+# ─── Reports ──────────────────────────────────────────────────────────────────
+
+class ReportSubmitRequest(BaseModel):
+    report: dict[str, Any]
+    report_type: str = "initial_certification"
+    intake_id: Optional[str] = None
+    tenant_id: Optional[str] = None
+    owner_user_id: Optional[str] = None
+
+
+class ReportSubmitResponse(BaseModel):
+    report_id: str
+    device_id: str
+    identity_hash: str
+    report_hash: str
+    schema_valid: bool
+    tier1_complete: bool
+    tier2_complete: bool
+    certificate_id: Optional[str] = None
+    certificate_code: Optional[str] = None
+    public_url: Optional[str] = None
+
+
+class AgentCertifyRequest(BaseModel):
+    schema_version: str = "1.0"
+    platform: str = "windows"
+    collection_context: dict[str, Any] = Field(default_factory=dict)
+    tier1_certification_identity: dict[str, Any] = Field(default_factory=dict)
+    tier2_value_determination: dict[str, Any] = Field(default_factory=dict)
+    tier3_optional_intelligence: dict[str, Any] = Field(default_factory=dict)
+    agent_metadata: dict[str, Any] = Field(default_factory=dict)
+
+
+class AgentCertifyResponse(BaseModel):
+    certificate_code: str
+    certificate_url: str
+    certificate_level: str
+    status: str
+    message: Optional[str] = None
+
+
+class AgentVerifyRequest(AgentCertifyRequest):
+    pass
+
+
+class AgentVerifyResponse(BaseModel):
+    result: str
+    message: str
+    changes: list[dict[str, Any]] = Field(default_factory=list)
+    attempt_id: Optional[str] = None
+    verification_url: Optional[str] = None
+    identity_match_score: Optional[float] = None
+    value_match_score: Optional[float] = None
+
+
+# ─── Certificates ─────────────────────────────────────────────────────────────
+
+class CertificatePublicResponse(BaseModel):
+    certificate_code: str
+    device_name: str
+    manufacturer: str
+    model: str
+    device_type: str
+    platform: str
+    certificate_level: str
+    status: str
+    condition_grade: Optional[str] = None
+    certification_date: datetime
+    expires_at: datetime
+    battery_health_percent: Optional[float] = None
+    storage_health_percent: Optional[float] = None
+    core_tests_passed: list[str] = Field(default_factory=list)
+    core_tests_total: int = 7
+    verification_url: str
+    qr_code_payload: str
+    public_url: str
+
+
+class CertificateLookupResponse(BaseModel):
+    exists: bool
+    certificate_code: str
+    status: Optional[str] = None
+    device_name: Optional[str] = None
+    expires_at: Optional[datetime] = None
+
+
+# ─── Verification ─────────────────────────────────────────────────────────────
+
+class VerifyLookupRequest(BaseModel):
+    certificate_code: str
+
+
+class VerifySubmitRequest(BaseModel):
+    certificate_code: str
+    report: dict[str, Any]
+
+
+class VerifySubmitResponse(BaseModel):
+    attempt_id: str
+    result: str
+    identity_match_score: float
+    value_match_score: float
+    summary: str
+    changes: list[dict[str, Any]] = Field(default_factory=list)
+    value_estimate_invalidated: bool = False
+    certificate_code: str
+    device_name: Optional[str] = None
+
+
+class VerificationAttemptResponse(BaseModel):
+    attempt_id: str
+    result: str
+    identity_match_score: float
+    value_match_score: float
+    summary: str
+    changes: list[dict[str, Any]] = Field(default_factory=list)
+    value_estimate_invalidated: bool = False
+    certificate_code: Optional[str] = None
+    device_name: Optional[str] = None
+    created_at: datetime
+
+
+# ─── Dashboard ────────────────────────────────────────────────────────────────
+
+class DashboardCertificateSummary(BaseModel):
+    id: str
+    certificate_code: str
+    device_name: str
+    certificate_level: str
+    status: str
+    condition_grade: Optional[str] = None
+    issued_at: datetime
+    expires_at: datetime
+    public_url: str
+
+
+class DashboardResponse(BaseModel):
+    user_id: Optional[str] = None
+    certificates: list[DashboardCertificateSummary] = Field(default_factory=list)
+    verification_count: int = 0
+
+
+# ─── Tenants ──────────────────────────────────────────────────────────────────
+
+class TenantResponse(BaseModel):
+    id: str
+    name: str
+    slug: str
+    role: Optional[str] = None
+
+
+# ─── Auth Profile ─────────────────────────────────────────────────────────────
+
+class AuthProfileResponse(BaseModel):
+    id: str
+    email: Optional[str] = None
+    full_name: Optional[str] = None
+    tenants: list[TenantResponse] = Field(default_factory=list)
