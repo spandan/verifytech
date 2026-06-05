@@ -28,6 +28,7 @@ def agent_report_to_internal(raw: dict[str, Any]) -> dict[str, Any]:
     display = t2.get("display") or {}
     graphics = t2.get("graphics") or {}
     functional = t2.get("functional_readiness") or {}
+    functional_tests = raw.get("functional_tests") or {}
     security = t3.get("security") or {}
     firmware = t3.get("firmware") or {}
     network = t3.get("network") or {}
@@ -78,11 +79,17 @@ def agent_report_to_internal(raw: dict[str, Any]) -> dict[str, Any]:
             "display_resolution": display.get("resolution"),
             "display_status": "ok" if display.get("resolution") else None,
             "gpu_model": graphics.get("gpu_model"),
-            "camera_test_passed": functional.get("camera_present"),
-            "microphone_test_passed": functional.get("microphone_present"),
-            "speaker_test_passed": functional.get("speaker_present"),
-            "keyboard_test_passed": functional.get("keyboard_present"),
-            "touchpad_test_passed": functional.get("touchpad_present"),
+            "camera_test_passed": _legacy_test_passed(
+                functional_tests.get("camera_test"), functional.get("camera_test_passed")
+            ),
+            "microphone_test_passed": _legacy_test_passed(
+                functional_tests.get("microphone_test"), functional.get("microphone_test_passed")
+            ),
+            "speaker_test_passed": _legacy_test_passed(
+                functional_tests.get("speaker_test"), functional.get("speaker_test_passed")
+            ),
+            "keyboard_test_passed": functional.get("keyboard_test_passed"),
+            "touchpad_test_passed": functional.get("touchpad_test_passed"),
             "wifi_test_passed": functional.get("wifi_present"),
             "charging_test_passed": _charging_ok(functional.get("charging_status")),
             "cosmetic_grade": None,
@@ -107,6 +114,8 @@ def agent_report_to_internal(raw: dict[str, Any]) -> dict[str, Any]:
             "collection_context": ctx,
             "agent_metadata": raw.get("agent_metadata"),
             "os_build": t1.get("os_build"),
+            "certification_assessment": raw.get("certification_assessment"),
+            "functional_tests": raw.get("functional_tests"),
         },
     }
 
@@ -125,6 +134,20 @@ def _cpu_details(cpu: dict[str, Any]) -> Optional[str]:
     if threads:
         parts.append(f"{threads}T")
     return " ".join(parts)
+
+
+def _legacy_test_passed(test: Any, tier2_fallback: Any) -> Optional[bool]:
+    if isinstance(test, dict):
+        result = test.get("result")
+        if result == "passed":
+            return True
+        if test.get("tested") and result == "failed":
+            return False
+        if result in ("present_not_tested", "inconclusive"):
+            return None
+    if tier2_fallback is not None:
+        return tier2_fallback
+    return None
 
 
 def _charging_ok(status: Optional[str]) -> Optional[bool]:

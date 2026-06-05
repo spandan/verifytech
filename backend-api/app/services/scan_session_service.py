@@ -20,6 +20,8 @@ from app.schemas.dto import (
 )
 from app.services.agent_report_adapter import agent_report_to_internal
 from app.services.audit_service import AuditService
+from app.services.evidence_storage_service import EvidenceStorageService
+from app.services.inspection_report_service import InspectionReportService
 from app.services.report_service import ReportService
 
 
@@ -27,6 +29,8 @@ class ScanSessionService:
     def __init__(self) -> None:
         self._reports = ReportService()
         self._audit = AuditService()
+        self._evidence = EvidenceStorageService()
+        self._inspection = InspectionReportService()
 
     def start(self, db: Database, body: ScanSessionStartRequest) -> ScanSessionStartResponse:
         if body.platform.lower() != "windows":
@@ -120,6 +124,25 @@ class ScanSessionService:
 
         report_url = result.public_url or f"{settings.public_base_url}/c/{result.certificate_code}"
         qr_url = report_url
+
+        evidence_manifest: list[dict] = []
+        if body.evidence_artifacts and result.certificate_code:
+            evidence_manifest = self._evidence.upload_artifacts(
+                result.certificate_code,
+                [a.model_dump(mode="json") for a in body.evidence_artifacts],
+            )
+
+        inspection = self._inspection.build(body.scan_data, evidence_manifest)
+        bundle = body.scan_data.get("evidence_bundle") or {}
+        provenance = bundle.get("build_provenance") if isinstance(bundle, dict) else None
+        if cert := db.get_certificate_by_code(result.certificate_code):
+            payload = dict(cert.public_payload_json or {})
+            payload["inspection_report"] = inspection
+            payload["agent_provenance"] = provenance
+            payload["evidence_manifest"] = evidence_manifest
+            db.client.table("certificates").update(
+                {"public_payload_json": payload, "condition_grade": inspection.get("certification_grade")}
+            ).eq("id", cert.id).execute()
 
         db.update_scan_session(
             session_id,

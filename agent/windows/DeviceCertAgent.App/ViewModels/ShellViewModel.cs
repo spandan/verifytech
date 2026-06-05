@@ -6,6 +6,7 @@ using CommunityToolkit.Mvvm.Input;
 using DeviceCertAgent.App.Services;
 using DeviceCertAgent.Core.Models;
 using DeviceCertAgent.Core.Services;
+using DeviceCertAgent.Core.Services.V2;
 
 namespace DeviceCertAgent.App.ViewModels;
 
@@ -15,6 +16,7 @@ public enum AppPage
     Disclosure,
     Permission,
     ScanProgress,
+    FunctionalTests,
     ResultPreview,
     Submitting,
     CertificateSuccess,
@@ -25,6 +27,8 @@ public partial class ShellViewModel : ObservableObject
 {
     private readonly AgentRuntimeSettings _settings;
     private readonly DiagnosticScanService _scan = new();
+    private readonly DeepCertificationOrchestrator _deepCert = new();
+    public FunctionalTestsViewModel FunctionalTests { get; } = new();
     private readonly ScanQualityService _quality = new();
     private readonly LocalCacheCleanupService _cache = new();
     private readonly AgentLogger _logger = new();
@@ -52,6 +56,7 @@ public partial class ShellViewModel : ObservableObject
     [ObservableProperty] private string _submissionStatus = "";
     [ObservableProperty] private bool _adminModeSelected;
     [ObservableProperty] private ScanSummary? _summary;
+    [ObservableProperty] private string _inspectionReport = "";
     [ObservableProperty] private ScanSessionSubmitResponse? _certResult;
     [ObservableProperty] private string _errorMessage = "";
     [ObservableProperty] private bool _hasError;
@@ -179,8 +184,9 @@ public partial class ShellViewModel : ObservableObject
             ScanProgress = 100;
             StatusMessage = "Scan complete.";
 
-            Summary = _quality.BuildSummary(_collectionResult, AdminModeSelected ? "Enhanced" : "Standard");
-            CurrentPage = AppPage.ResultPreview;
+            CurrentPage = AppPage.FunctionalTests;
+            FunctionalTests.CurrentStep = FunctionalTestStep.Hub;
+            StatusMessage = "Complete interactive checks, or skip to continue.";
         }
         catch (Exception ex)
         {
@@ -188,6 +194,44 @@ public partial class ShellViewModel : ObservableObject
             ShowError(MapScanError(ex));
             CurrentPage = AppPage.Permission;
         }
+    }
+
+    [RelayCommand]
+    private async Task CompleteFunctionalTests()
+    {
+        if (_collectionResult is null) return;
+
+        _collectionResult.FunctionalTests = FunctionalTests.Results;
+        FunctionalTests.FinalizeBeforeSubmit(_collectionResult);
+        var deep = await _deepCert.RunAsync(
+            _collectionResult,
+            AdminModeSelected,
+            FunctionalTests.Results,
+            _scanCts?.Token ?? default);
+        _collectionResult.Certification = deep.Assessment;
+        _collectionResult.Evidence = deep.Evidence;
+
+        Summary = _quality.BuildSummary(_collectionResult, AdminModeSelected ? "Enhanced v2" : "Standard v2");
+        InspectionReport = FormatInspectionReport(_collectionResult.Certification);
+        CurrentPage = AppPage.ResultPreview;
+    }
+
+    private static string FormatInspectionReport(Core.Models.V2.CertificationAssessmentV2? c)
+    {
+        if (c is null) return "";
+        var s = c.Summary;
+        return string.Join(Environment.NewLine + Environment.NewLine,
+        [
+            "── Device Overview ──", s.DeviceOverview,
+            "── Health Summary ──", s.HealthSummary,
+            "── Battery ──", s.BatteryCondition,
+            "── Storage ──", s.StorageCondition,
+            "── Performance ──", s.PerformanceRating,
+            "── Security ──", s.SecurityRating,
+            "── Functional Tests ──", s.FunctionalTestResults,
+            "── Grade ──", $"Recommended resale grade: {s.RecommendedResaleGrade}",
+            "── Refurbisher Notes ──", s.RefurbisherNotes,
+        ]);
     }
 
     [RelayCommand]

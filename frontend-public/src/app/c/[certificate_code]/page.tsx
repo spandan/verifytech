@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { CertificateCard } from "@/components/CertificateCard";
+import { InspectionReport } from "@/components/InspectionReport";
 import { ShareButton } from "@/components/ShareButton";
 import { api } from "@/lib/api";
 import { env } from "@/lib/env";
@@ -26,6 +27,10 @@ export default async function CertificatePage({ params }: Props) {
   return (
     <div className="page-container page-container--cert py-10 md:py-14">
       <CertificateCard cert={cert} />
+
+      {cert.inspection_report && (
+        <InspectionReport report={cert.inspection_report} />
+      )}
 
       <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
         <Link

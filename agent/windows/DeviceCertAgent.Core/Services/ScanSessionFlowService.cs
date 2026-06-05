@@ -1,6 +1,7 @@
 using System.Net.Http;
 using DeviceCertAgent.Core.Configuration;
 using DeviceCertAgent.Core.Models;
+using DeviceCertAgent.Core.Models.V2;
 
 namespace DeviceCertAgent.Core.Services;
 
@@ -44,6 +45,7 @@ public sealed class ScanSessionFlowService : IDisposable
     {
         var launch = new AppLaunchOptions { Mode = "certify" };
         var report = _reportAssembly.Assemble(collected, launch, adminMode);
+        report.EvidenceBundle = collected.Evidence;
         var fingerprint = HardwareFingerprintService.Compute(collected);
 
         var payload = new ScanSessionSubmitPayload
@@ -57,6 +59,7 @@ public sealed class ScanSessionFlowService : IDisposable
             AdminMode = adminMode,
             HardwareFingerprint = fingerprint,
             ScanData = report,
+            EvidenceArtifacts = SerializeEvidence(collected.Evidence),
         };
 
         _logger.Info($"Submitting scan session {MaskId(session.SessionId)}");
@@ -95,7 +98,29 @@ public sealed class ScanSessionFlowService : IDisposable
         _ => ex,
     };
 
+    private static List<EvidenceArtifactUpload>? SerializeEvidence(CertificationEvidenceBundle? bundle)
+    {
+        if (bundle is null || bundle.Artifacts.Count == 0) return null;
+        return bundle.Artifacts.Select(a => new EvidenceArtifactUpload
+        {
+            ArtifactType = a.ArtifactType,
+            ContentType = a.ContentType,
+            ContentBase64 = Convert.ToBase64String(a.Content),
+            CollectedAt = a.CollectedAt,
+            Source = a.Source,
+        }).ToList();
+    }
+
     public void Dispose() => _api.Dispose();
+}
+
+public sealed class EvidenceArtifactUpload
+{
+    public string ArtifactType { get; set; } = "";
+    public string ContentType { get; set; } = "application/octet-stream";
+    public string ContentBase64 { get; set; } = "";
+    public string CollectedAt { get; set; } = "";
+    public string Source { get; set; } = "";
 }
 
 public sealed class ScanSessionSubmitPayload
@@ -109,4 +134,5 @@ public sealed class ScanSessionSubmitPayload
     public bool AdminMode { get; set; }
     public string HardwareFingerprint { get; set; } = "";
     public DeviceReport ScanData { get; set; } = new();
+    public List<EvidenceArtifactUpload>? EvidenceArtifacts { get; set; }
 }

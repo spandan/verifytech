@@ -15,6 +15,12 @@ public static class SafeConvert
         return int.TryParse(value.ToString(), out var n) ? n : null;
     }
 
+    public static long? ToLong(object? value)
+    {
+        if (value is null) return null;
+        return long.TryParse(value.ToString(), out var n) ? n : null;
+    }
+
     public static double? ToDouble(object? value)
     {
         if (value is null) return null;

@@ -11,6 +11,7 @@
     <conv:StepStatusIconConverter x:Key="StepIcon"/>
     <conv:StepStatusBrushConverter x:Key="StepBrush"/>
     <conv:BoolVisConverter x:Key="BoolVis"/>
+    <conv:FunctionalStepVisibilityConverter x:Key="FuncStepVis"/>
   </Window.Resources>
 
   <Grid Margin="28">
@@ -129,11 +130,117 @@
           </ItemsControl>
         </StackPanel>
 
+        <!-- Functional tests -->
+        <StackPanel Visibility="{Binding CurrentPage, Converter={StaticResource PageVis}, ConverterParameter=FunctionalTests}"
+                    DataContext="{Binding FunctionalTests}">
+          <TextBlock Text="Functional certification" Style="{StaticResource PageTitle}" Margin="0,0,0,8"/>
+          <TextBlock Style="{StaticResource BodyText}" Text="{Binding StatusMessage}" Margin="0,0,0,16"/>
+
+          <StackPanel Visibility="{Binding CurrentStep, Converter={StaticResource FuncStepVis}, ConverterParameter=Hub}">
+            <Border Style="{StaticResource CardBorder}" Margin="0,0,0,16">
+              <TextBlock Style="{StaticResource BodyText}" TextWrapping="Wrap"
+                         Text="Verify display, audio, camera, keyboard, touchpad, and USB. Skipped tests stay not verified — they are never reported as passed."/>
+            </Border>
+            <StackPanel Orientation="Horizontal">
+              <Button Content="Start tests" Style="{StaticResource AccentButton}" Command="{Binding StartTestsCommand}" Margin="0,0,8,0"/>
+              <Button Content="Skip all" Style="{StaticResource SecondaryButton}" Command="{Binding SkipAllCommand}" Margin="0,0,8,0"/>
+              <Button Content="Continue to report" Style="{StaticResource PrimaryButton}"
+                      Command="{Binding DataContext.CompleteFunctionalTestsCommand, RelativeSource={RelativeSource AncestorType=Window}}"/>
+            </StackPanel>
+          </StackPanel>
+
+          <StackPanel Visibility="{Binding CurrentStep, Converter={StaticResource FuncStepVis}, ConverterParameter=Display}">
+            <CheckBox Content="No dead pixels observed" IsChecked="{Binding DisplayDeadPixelsOk}" Margin="0,4"/>
+            <CheckBox Content="Brightness OK" IsChecked="{Binding DisplayBrightnessOk}" Margin="0,4"/>
+            <CheckBox Content="Colors correct" IsChecked="{Binding DisplayColorOk}" Margin="0,4"/>
+            <CheckBox Content="Uniformity acceptable" IsChecked="{Binding DisplayUniformityOk}" Margin="0,4"/>
+            <Button Content="Continue" Style="{StaticResource AccentButton}" Command="{Binding FinishDisplayCommand}" Margin="0,16,0,0" HorizontalAlignment="Left"/>
+          </StackPanel>
+
+          <StackPanel Visibility="{Binding CurrentStep, Converter={StaticResource FuncStepVis}, ConverterParameter=Speaker}">
+            <TextBlock Style="{StaticResource BodyText}" TextWrapping="Wrap" Margin="0,0,0,12"
+                       Text="Stereo speaker test. Confirm each channel separately."/>
+            <Button Content="Play left channel" Command="{Binding PlaySpeakerLeftCommand}" Style="{StaticResource PrimaryButton}" Margin="0,0,0,8"/>
+            <Button Content="Left channel audible" Command="{Binding ConfirmSpeakerLeftCommand}" Style="{StaticResource SecondaryButton}" Margin="0,0,0,12"/>
+            <Button Content="Play right channel" Command="{Binding PlaySpeakerRightCommand}" Style="{StaticResource PrimaryButton}" Margin="0,0,0,8"/>
+            <StackPanel Orientation="Horizontal">
+              <Button Content="Right channel audible" Command="{Binding ConfirmSpeakerRightCommand}" Style="{StaticResource AccentButton}" Margin="0,0,8,0"/>
+              <Button Content="Speakers failed" Command="{Binding ConfirmSpeakerFailedCommand}" Style="{StaticResource SecondaryButton}"/>
+            </StackPanel>
+          </StackPanel>
+
+          <StackPanel Visibility="{Binding CurrentStep, Converter={StaticResource FuncStepVis}, ConverterParameter=Microphone}">
+            <TextBlock Style="{StaticResource BodyText}" TextWrapping="Wrap" Margin="0,0,0,12"
+                       Text="Audio is recorded locally for playback only and deleted immediately after testing. No audio is uploaded."/>
+            <Button Content="Record 4 second sample" Command="{Binding RecordMicrophoneSampleCommand}" Style="{StaticResource PrimaryButton}" Margin="0,0,0,8"/>
+            <Button Content="Play sample back" Command="{Binding PlayMicrophoneSampleCommand}" Style="{StaticResource SecondaryButton}" Margin="0,0,0,12"/>
+            <StackPanel Orientation="Horizontal">
+              <Button Content="Playback confirmed" Command="{Binding ConfirmMicrophonePassedCommand}" Style="{StaticResource AccentButton}" Margin="0,0,8,0"/>
+              <Button Content="Mic failed" Command="{Binding ConfirmMicrophoneFailedCommand}" Style="{StaticResource SecondaryButton}"/>
+            </StackPanel>
+          </StackPanel>
+
+          <StackPanel Visibility="{Binding CurrentStep, Converter={StaticResource FuncStepVis}, ConverterParameter=Camera}">
+            <TextBlock Style="{StaticResource BodyText}" TextWrapping="Wrap" Margin="0,0,0,12"
+                       Text="Live preview remains on this device. No images or video are uploaded."/>
+            <Border Background="{StaticResource SurfaceMutedBrush}" CornerRadius="8" Height="220" Margin="0,0,0,8">
+              <Image Source="{Binding CameraPreviewFrame}" Stretch="Uniform"/>
+            </Border>
+            <TextBlock Style="{StaticResource BodyText}" Margin="0,0,0,8"
+                       Text="{Binding CameraName, StringFormat=Camera: {0}}"/>
+            <TextBlock Style="{StaticResource BodyText}" Margin="0,0,0,12"
+                       Text="{Binding CameraResolution, StringFormat=Resolution: {0}}"/>
+            <Button Content="I can clearly see the preview" Command="{Binding ConfirmCameraPreviewYesCommand}" Style="{StaticResource AccentButton}" Margin="0,0,0,8"/>
+            <Button Content="Camera failed" Command="{Binding ConfirmCameraFailedCommand}" Style="{StaticResource SecondaryButton}" HorizontalAlignment="Left"/>
+          </StackPanel>
+
+          <StackPanel Visibility="{Binding CurrentStep, Converter={StaticResource FuncStepVis}, ConverterParameter=Keyboard}">
+            <TextBlock Text="{Binding KeyboardCaptureStatus}" Style="{StaticResource BodyText}" Margin="0,0,0,8"/>
+            <TextBox Text="{Binding KeysPressedDisplay}" IsReadOnly="True" Height="80" TextWrapping="Wrap" Margin="0,0,0,12"/>
+            <StackPanel Orientation="Horizontal">
+              <Button Content="Done" Command="{Binding FinishKeyboardCommand}" Style="{StaticResource AccentButton}" Margin="0,0,8,0"/>
+              <Button Content="Skip" Command="{Binding SkipKeyboardCommand}" Style="{StaticResource SecondaryButton}"/>
+            </StackPanel>
+          </StackPanel>
+
+          <StackPanel Visibility="{Binding CurrentStep, Converter={StaticResource FuncStepVis}, ConverterParameter=Touchpad}">
+            <CheckBox Content="Movement detected" IsChecked="{Binding TouchpadMoved}" Margin="0,4"/>
+            <CheckBox Content="Left click" IsChecked="{Binding LeftClickOk}" Margin="0,4"/>
+            <CheckBox Content="Right click" IsChecked="{Binding RightClickOk}" Margin="0,4"/>
+            <StackPanel Orientation="Horizontal" Margin="0,12,0,0">
+              <Button Content="Continue" Command="{Binding FinishTouchpadCommand}" Style="{StaticResource AccentButton}" Margin="0,0,8,0"/>
+              <Button Content="Skip" Command="{Binding SkipTouchpadCommand}" Style="{StaticResource SecondaryButton}"/>
+            </StackPanel>
+          </StackPanel>
+
+          <StackPanel Visibility="{Binding CurrentStep, Converter={StaticResource FuncStepVis}, ConverterParameter=Ports}">
+            <TextBlock Style="{StaticResource BodyText}" TextWrapping="Wrap" Margin="0,0,0,8"
+                       Text="Only connection status is validated. Files and contents are never accessed."/>
+            <TextBlock Style="{StaticResource BodyText}" Text="{Binding UsbStatus}" Margin="0,0,0,12"/>
+            <Button Content="USB inserted" Command="{Binding ConfirmUsbInsertDetectedCommand}" Style="{StaticResource SecondaryButton}" Margin="0,0,0,8"/>
+            <StackPanel Orientation="Horizontal">
+              <Button Content="Test complete" Command="{Binding FinishUsbTestCommand}" Style="{StaticResource AccentButton}" Margin="0,0,8,0"/>
+              <Button Content="USB failed" Command="{Binding ConfirmUsbFailedCommand}" Style="{StaticResource SecondaryButton}" Margin="0,0,8,0"/>
+              <Button Content="Skip" Command="{Binding SkipPortsCommand}" Style="{StaticResource SecondaryButton}"/>
+            </StackPanel>
+          </StackPanel>
+
+          <Button Visibility="{Binding CurrentStep, Converter={StaticResource FuncStepVis}, ConverterParameter=Complete}"
+                  Content="View inspection report" Style="{StaticResource AccentButton}" Margin="0,16,0,0"
+                  Command="{Binding DataContext.CompleteFunctionalTestsCommand, RelativeSource={RelativeSource AncestorType=Window}}"/>
+        </StackPanel>
+
         <!-- 5 Result preview -->
         <StackPanel Visibility="{Binding CurrentPage, Converter={StaticResource PageVis}, ConverterParameter=ResultPreview}">
           <TextBlock Text="Review before submitting" Style="{StaticResource PageTitle}" Margin="0,0,0,8"/>
-          <TextBlock Style="{StaticResource BodyText}" Margin="0,0,0,16" TextWrapping="Wrap"
-                     Text="Confirm the hardware details below. When you submit, VerifyTech receives a diagnostic report to issue your certificate. Personal files and browsing data are never included."/>
+          <TextBlock Style="{StaticResource BodyText}" Margin="0,0,0,12" TextWrapping="Wrap"
+                     Text="Professional inspection summary — submit to receive your server-signed certificate."/>
+          <Border Style="{StaticResource CardBorder}" Margin="0,0,0,12">
+            <ScrollViewer MaxHeight="200" VerticalScrollBarVisibility="Auto">
+              <TextBlock Text="{Binding InspectionReport}" FontSize="13" TextWrapping="Wrap"
+                         Foreground="{StaticResource TextPrimaryBrush}"/>
+            </ScrollViewer>
+          </Border>
           <Border Style="{StaticResource CardBorder}" Margin="0,0,0,16" DataContext="{Binding Summary}">
             <Grid>
               <Grid.ColumnDefinitions>

@@ -257,6 +257,24 @@ CREATE TABLE scan_sessions (
 CREATE INDEX idx_scan_sessions_status ON scan_sessions(status);
 CREATE INDEX idx_scan_sessions_expires_at ON scan_sessions(expires_at);
 
+-- ─── Certification evidence storage (Supabase Storage) ───────────────────
+INSERT INTO storage.buckets (id, name, public, file_size_limit)
+VALUES (
+    'certification-evidence',
+    'certification-evidence',
+    FALSE,
+    52428800
+)
+ON CONFLICT (id) DO UPDATE
+SET public = EXCLUDED.public,
+    file_size_limit = EXCLUDED.file_size_limit;
+
+CREATE POLICY "Authenticated upload certification evidence"
+ON storage.objects
+FOR INSERT
+TO authenticated
+WITH CHECK (bucket_id = 'certification-evidence');
+
 -- ─── Seed default Windows agent placeholder ───────────────────────────────
 INSERT INTO agent_versions (platform, version, download_url, checksum, is_active, release_notes)
 VALUES (

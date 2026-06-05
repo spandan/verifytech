@@ -1,3 +1,5 @@
+using DeviceCertAgent.Core.Models.V2;
+
 namespace DeviceCertAgent.Core.Models;
 
 public sealed class AgentOptions
@@ -12,13 +14,16 @@ public sealed class AgentOptions
 
 public sealed class DeviceReport
 {
-    public string SchemaVersion { get; set; } = "1.0";
+    public string SchemaVersion { get; set; } = "2.3";
     public string Platform { get; set; } = "windows";
     public CollectionContext CollectionContext { get; set; } = new();
     public Tier1Identity Tier1CertificationIdentity { get; set; } = new();
     public Tier2Value Tier2ValueDetermination { get; set; } = new();
     public Tier3Intelligence Tier3OptionalIntelligence { get; set; } = new();
     public AgentMetadata AgentMetadata { get; set; } = new();
+    public CertificationAssessmentV2? CertificationAssessment { get; set; }
+    public FunctionalCertificationResults? FunctionalTests { get; set; }
+    public CertificationEvidenceBundle? EvidenceBundle { get; set; }
 }
 
 public sealed class CollectionContext
@@ -32,7 +37,7 @@ public sealed class CollectionContext
 
 public static class CollectorConstants
 {
-    public const string Version = "1.0.0";
+    public const string Version = "2.3.0";
 }
 
 public sealed class Tier1Identity
@@ -117,6 +122,12 @@ public sealed class FunctionalReadiness
     public bool? KeyboardPresent { get; set; }
     public bool? TouchpadPresent { get; set; }
     public string? ChargingStatus { get; set; }
+    /// <summary>True only when functional validation result is passed (v2.3).</summary>
+    public bool? CameraTestPassed { get; set; }
+    public bool? MicrophoneTestPassed { get; set; }
+    public bool? SpeakerTestPassed { get; set; }
+    public bool? KeyboardTestPassed { get; set; }
+    public bool? TouchpadTestPassed { get; set; }
 }
 
 public sealed class Tier3Intelligence
@@ -180,4 +191,7 @@ public sealed class CollectionResult
     public Tier2Value Tier2 { get; set; } = new();
     public Tier3Intelligence Tier3 { get; set; } = new();
     public AgentMetadata Metadata { get; set; } = new();
+    public CertificationAssessmentV2? Certification { get; set; }
+    public FunctionalCertificationResults FunctionalTests { get; set; } = new();
+    public CertificationEvidenceBundle? Evidence { get; set; }
 }

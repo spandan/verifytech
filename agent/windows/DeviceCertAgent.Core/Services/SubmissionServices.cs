@@ -14,9 +14,11 @@ public sealed class ReportAssemblyService
         else
             metadata.CollectionWarnings.Add("scan_type:standard");
 
+        metadata.CollectionWarnings.Add("assessment_version:2.3");
+
         return new DeviceReport
         {
-            SchemaVersion = "1.0",
+            SchemaVersion = "2.3",
             Platform = "windows",
             CollectionContext = new CollectionContext
             {
@@ -30,6 +32,9 @@ public sealed class ReportAssemblyService
             Tier2ValueDetermination = collected.Tier2,
             Tier3OptionalIntelligence = collected.Tier3,
             AgentMetadata = metadata,
+            CertificationAssessment = collected.Certification,
+            FunctionalTests = collected.FunctionalTests,
+            EvidenceBundle = collected.Evidence,
         };
     }
 }

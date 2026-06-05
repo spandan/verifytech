@@ -4,7 +4,7 @@ namespace DeviceCertAgent.Core.Utilities;
 
 public static class PowerShellHelper
 {
-    public static string? Run(string script)
+    public static string? Run(string script, int timeoutMs = 30000)
     {
         try
         {
@@ -21,7 +21,7 @@ public static class PowerShellHelper
             using var process = Process.Start(psi);
             if (process is null) return null;
             var output = process.StandardOutput.ReadToEnd();
-            process.WaitForExit(15000);
+            process.WaitForExit(timeoutMs);
             return string.IsNullOrWhiteSpace(output) ? null : output.Trim();
         }
         catch
@@ -29,4 +29,31 @@ public static class PowerShellHelper
             return null;
         }
     }
+
+    public static string? RunViaCmd(string command, int timeoutMs = 30000)
+    {
+        try
+        {
+            var psi = new ProcessStartInfo
+            {
+                FileName = "cmd.exe",
+                Arguments = $"/c {command}",
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                UseShellExecute = false,
+                CreateNoWindow = true,
+            };
+            using var process = Process.Start(psi);
+            if (process is null) return null;
+            var output = process.StandardOutput.ReadToEnd();
+            process.WaitForExit(timeoutMs);
+            return string.IsNullOrWhiteSpace(output) ? null : output.Trim();
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    public static string? RunJson(string script) => Run(script);
 }

@@ -54,4 +54,6 @@ def get_public_certificate(certificate_code: str, db: Database = Depends(get_db)
         verification_url=payload.get("verification_url", ""),
         qr_code_payload=cert.qr_code_payload or "",
         public_url=cert.public_url or "",
+        inspection_report=payload.get("inspection_report"),
+        agent_provenance=payload.get("agent_provenance"),
     )

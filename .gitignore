@@ -42,6 +42,7 @@ npm-debug.log*
 
 # Supabase
 .supabase/
+database/backups/
 
 # Windows agent build artifacts (keep published exe for distribution)
 agent/windows/publish/*.pdb

@@ -32,6 +32,52 @@ export interface AgentInfo {
   full_download_url: string;
 }
 
+export interface InspectionReportSummary {
+  certification_grade?: string;
+  grade_subtitle?: string;
+  device_name?: string;
+  specs_line?: string;
+  battery?: string;
+  storage?: string;
+  performance?: string;
+  memory?: string;
+  thermals?: string;
+  screen?: string;
+  functional?: Record<string, string>;
+  security?: {
+    headline?: string;
+    secure_boot?: string;
+    encryption?: string;
+    tpm?: string;
+  };
+  resale_readiness?: string;
+  warnings?: Array<{ title: string; explanation: string }>;
+}
+
+export interface InspectionReport {
+  version?: string;
+  /** Layer 1 — plain-language buyer summary (preferred). */
+  summary?: InspectionReportSummary;
+  /** Layer 2 — technical details (collapsed in UI). */
+  advanced?: Record<string, unknown>;
+  /** @deprecated Legacy flat shape — UI normalizes automatically. */
+  device_overview?: Record<string, unknown>;
+  health_summary?: Record<string, unknown>;
+  functional_tests?: Record<string, string>;
+  security?: Record<string, unknown>;
+  warnings?: string[];
+  certification_grade?: string;
+  refurbisher_notes?: string;
+  expected_service_life?: string;
+  evidence?: Array<{
+    artifact_type: string;
+    label: string;
+    signed_url?: string;
+    storage_path?: string;
+  }>;
+  sections?: Record<string, string>;
+}
+
 export interface CertificatePublic {
   certificate_code: string;
   device_name: string;
@@ -51,6 +97,8 @@ export interface CertificatePublic {
   verification_url: string;
   qr_code_payload: string;
   public_url: string;
+  inspection_report?: InspectionReport | null;
+  agent_provenance?: Record<string, unknown> | null;
 }
 
 export interface VerificationResult {

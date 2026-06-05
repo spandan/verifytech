@@ -118,6 +118,8 @@ class CertificatePublicResponse(BaseModel):
     verification_url: str
     qr_code_payload: str
     public_url: str
+    inspection_report: Optional[dict[str, Any]] = None
+    agent_provenance: Optional[dict[str, Any]] = None
 
 
 class CertificateLookupResponse(BaseModel):
@@ -142,6 +144,14 @@ class ScanSessionStartResponse(BaseModel):
     expires_at: datetime
 
 
+class EvidenceArtifactUpload(BaseModel):
+    artifact_type: str
+    content_type: str = "application/octet-stream"
+    content_base64: str
+    collected_at: Optional[str] = None
+    source: Optional[str] = None
+
+
 class ScanSessionSubmitRequest(BaseModel):
     session_id: str
     nonce: str
@@ -152,6 +162,7 @@ class ScanSessionSubmitRequest(BaseModel):
     admin_mode: bool = False
     hardware_fingerprint: str = Field(min_length=16, max_length=128)
     scan_data: dict[str, Any]
+    evidence_artifacts: list[EvidenceArtifactUpload] = Field(default_factory=list)
 
 
 class ScanSessionSubmitResponse(BaseModel):

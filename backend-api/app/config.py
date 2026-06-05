@@ -35,10 +35,13 @@ class Settings(BaseSettings):
     supabase_agent_filename: str = "DeviceCertAgent.exe"
     supabase_agent_signed_url_ttl_seconds: int = 3600
 
+    supabase_evidence_bucket: str = "certification-evidence"
+    supabase_evidence_signed_url_ttl_seconds: int = 3600
+
     scan_session_ttl_minutes: int = 20
     scan_session_min_duration_seconds: int = 5
     scan_session_max_duration_hours: int = 2
-    allowed_agent_versions: str = "0.1.0,0.2.0,1.0.0"
+    allowed_agent_versions: str = "0.1.0,0.2.0,1.0.0,2.0.0,2.1.0,2.3.0"
 
     @property
     def allowed_agent_version_list(self) -> list[str]:

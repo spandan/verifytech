@@ -58,8 +58,10 @@ public sealed class ScanQualityService
             Cpu = result.Tier1.CpuModel,
             Ram = $"{result.Tier1.RamTotalGb:0}GB",
             Storage = storageDesc,
-            Battery = FormatBatterySummary(result.Tier2.Battery),
-            StorageHealth = healths.Count > 0 ? $"{healths.Average():0}%" : "N/A",
+            Battery = result.Certification?.Battery.Condition.Value
+                ?? FormatBatterySummary(result.Tier2.Battery),
+            StorageHealth = result.Certification?.Storage.FirstOrDefault()?.Condition.Value
+                ?? (healths.Count > 0 ? $"{healths.Average():0}%" : "N/A"),
             Display = result.Tier2.Display.Resolution ?? "N/A",
             Graphics = result.Tier2.Graphics.GpuModel ?? "N/A",
             Security = securityParts.Count > 0 ? string.Join(" · ", securityParts) : "N/A",

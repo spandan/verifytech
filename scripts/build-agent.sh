@@ -51,6 +51,11 @@ dotnet publish DeviceCertAgent.App/DeviceCertAgent.App.csproj \
   /p:VerifyTechBuildChannel="${CHANNEL}" \
   -o publish
 
+if command -v powershell.exe &>/dev/null || [[ -f "/mnt/c/Windows/System32/WindowsPowerShell/v1.0/powershell.exe" ]]; then
+  echo "Running code signing (if VERIFYTECH_SIGNING_THUMBPRINT is set)..."
+  powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$ROOT/scripts/sign-agent.ps1" 2>/dev/null || true
+fi
+
 echo ""
 echo "Built: agent/windows/publish/DeviceCertAgent.exe"
-echo "Copy to backend static path or distribute to users."
+echo "Set VERIFYTECH_SIGNING_THUMBPRINT for Authenticode signing."

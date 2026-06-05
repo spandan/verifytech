@@ -70,20 +70,25 @@ export function CertificateCard({ cert }: { cert: CertificatePublic }) {
                   value={`${Math.round(cert.storage_health_percent)}%`}
                 />
               )}
-              <Metric label="Core tests" value={`${testsPassed} of ${testsTotal} passed`} />
+              <Metric
+                label="Checks passed"
+                value={
+                  testsTotal > 0
+                    ? `${testsPassed} of ${testsTotal} verified`
+                    : "See report below"
+                }
+              />
             </div>
 
-            {cert.core_tests_passed.length > 0 && (
-              <div>
-                <p className="metric-cell__label mb-2">Core tests passed</p>
-                <div className="flex flex-wrap gap-2">
-                  {cert.core_tests_passed.map((t) => (
-                    <span key={t} className="test-chip">
-                      {t}
-                    </span>
-                  ))}
-                </div>
-              </div>
+            {testsPassed > 0 && (
+              <p className="text-sm text-secondary">
+                Interactive checks completed for{" "}
+                {cert.core_tests_passed.slice(0, 4).join(", ")}
+                {cert.core_tests_passed.length > 4
+                  ? `, and ${cert.core_tests_passed.length - 4} more`
+                  : ""}
+                . Full details are in the inspection report below.
+              </p>
             )}
 
             <p className="text-xs text-muted">
