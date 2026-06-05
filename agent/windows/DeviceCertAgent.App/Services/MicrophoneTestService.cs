@@ -1,3 +1,4 @@
+using System.IO;
 using DeviceCertAgent.Core.Models.V2;
 using NAudio.Wave;
 
@@ -16,7 +17,7 @@ public sealed class MicrophoneTestService : IDisposable
         _tempPath = Path.Combine(Path.GetTempPath(), $"vt-mic-{Guid.NewGuid():N}.wav");
 
         var deviceName = "Default capture device";
-        var sampleRate = 48000;
+        var sampleRate = 44100;
         double peak = 0;
         double sum = 0;
         long samples = 0;
@@ -25,33 +26,40 @@ public sealed class MicrophoneTestService : IDisposable
         {
             using var waveIn = new WaveInEvent
             {
-                WaveFormat = new WaveFormat(sampleRate, 16, 1),
-                BufferMilliseconds = 50,
+                BufferMilliseconds = 100,
             };
+            sampleRate = waveIn.WaveFormat.SampleRate;
+            deviceName = $"Capture device ({waveIn.WaveFormat.SampleRate} Hz)";
 
             using var writer = new WaveFileWriter(_tempPath, waveIn.WaveFormat);
-            var lockObj = new object();
+            var done = new ManualResetEventSlim(false);
 
             waveIn.DataAvailable += (_, e) =>
             {
                 writer.Write(e.Buffer, 0, e.BytesRecorded);
-                var recorded = e.BytesRecorded / 2;
+                var bytesPerSample = Math.Max(1, waveIn.WaveFormat.BitsPerSample / 8);
+                var recorded = e.BytesRecorded / bytesPerSample;
                 for (var i = 0; i < recorded; i++)
                 {
-                    var sample = Math.Abs(BitConverter.ToInt16(e.Buffer, i * 2) / 32768.0);
-                    lock (lockObj)
+                    var offset = i * bytesPerSample;
+                    double sample = waveIn.WaveFormat.BitsPerSample switch
                     {
-                        peak = Math.Max(peak, sample);
-                        sum += sample;
-                        samples++;
-                    }
+                        16 => Math.Abs(BitConverter.ToInt16(e.Buffer, offset) / 32768.0),
+                        32 when waveIn.WaveFormat.Encoding == WaveFormatEncoding.IeeeFloat =>
+                            Math.Abs(BitConverter.ToSingle(e.Buffer, offset)),
+                        _ => Math.Abs(e.Buffer[offset] / 128.0),
+                    };
+                    peak = Math.Max(peak, sample);
+                    sum += sample;
+                    samples++;
                 }
             };
 
-            waveIn.RecordingStopped += (_, _) => { };
+            waveIn.RecordingStopped += (_, _) => done.Set();
             waveIn.StartRecording();
             Thread.Sleep(seconds * 1000);
             waveIn.StopRecording();
+            done.Wait(TimeSpan.FromSeconds(3), CancellationToken.None);
             writer.Flush();
         }, ct);
 
@@ -63,13 +71,13 @@ public sealed class MicrophoneTestService : IDisposable
             RecordedSeconds = seconds,
             PeakLevel = Math.Round(peak, 4),
             AverageLevel = Math.Round(average, 4),
-            SignalDetected = peak > 0.02 || average > 0.005,
+            SignalDetected = peak > 0.015 || average > 0.004,
             DeviceName = deviceName,
             SampleRateHz = sampleRate,
             TempAudioDeleted = false,
             Privacy = new FunctionalTestPrivacy { AudioUploaded = false },
-            Result = peak > 0.02 ? ValidationResults.Passed : ValidationResults.Inconclusive,
-            Reason = peak > 0.02 ? null : "low_signal_level",
+            Result = peak > 0.015 ? ValidationResults.Passed : ValidationResults.Inconclusive,
+            Reason = peak > 0.015 ? null : "low_signal_level",
         };
     }
 
@@ -78,7 +86,7 @@ public sealed class MicrophoneTestService : IDisposable
         if (_tempPath is null || !File.Exists(_tempPath)) return;
         StopPlayback();
         _playback = new WaveOutEvent();
-        _playback.Init(new AudioFileReader(_tempPath));
+        _playback.Init(new AudioFileReader(_tempPath) { Volume = 1.0f });
         _playback.Play();
     }
 

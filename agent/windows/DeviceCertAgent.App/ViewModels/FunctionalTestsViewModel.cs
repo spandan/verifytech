@@ -1,3 +1,4 @@
+using System.Collections.ObjectModel;
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Media.Imaging;
@@ -40,6 +41,10 @@ public partial class FunctionalTestsViewModel : ObservableObject, IAsyncDisposab
     [ObservableProperty] private bool _microphonePlaybackConfirmed;
     [ObservableProperty] private bool _isRecordingMic;
     [ObservableProperty] private bool _cameraPreviewActive;
+    [ObservableProperty] private bool _isCameraStarting;
+    [ObservableProperty] private string _cameraStatus = "";
+    [ObservableProperty] private bool _showsCameraAccessInstructions;
+    [ObservableProperty] private string _cameraHelpTitle = "";
     [ObservableProperty] private string? _cameraName;
     [ObservableProperty] private string? _cameraResolution;
     [ObservableProperty] private int? _cameraFps;
@@ -67,10 +72,30 @@ public partial class FunctionalTestsViewModel : ObservableObject, IAsyncDisposab
         "SPACE", "ENTER", "TAB", "SHIFT", "CONTROL", "ALT",
     ];
 
+    public event Action? ReachedCompleteStep;
+
+    public ObservableCollection<string> CameraAccessSteps { get; } =
+        new(CameraAccessHelper.GetAccessInstructionSteps());
+
     public FunctionalTestsViewModel()
     {
         _displayHotplug.StartMonitoring();
         _audioJack.StartMonitoring();
+    }
+
+    [RelayCommand]
+    private void OpenCameraSettings()
+    {
+        if (!CameraAccessHelper.TryOpenCameraSettings())
+            StatusMessage = "Open Settings manually: Privacy & security → Camera.";
+        else
+            StatusMessage = "Enable camera access in Settings, then tap Retry camera.";
+    }
+
+    partial void OnCurrentStepChanged(FunctionalTestStep value)
+    {
+        if (value == FunctionalTestStep.Complete)
+            ReachedCompleteStep?.Invoke();
     }
 
     [RelayCommand]
@@ -92,9 +117,27 @@ public partial class FunctionalTestsViewModel : ObservableObject, IAsyncDisposab
         Results.Display.Skipped = true;
         Results.Keyboard.Skipped = true;
         Results.Touchpad.Skipped = true;
-        Results.SpeakerTest = ComponentValidationStatus.PresentNotTested("skipped");
-        Results.MicrophoneTest = ComponentValidationStatus.PresentNotTested("skipped");
-        Results.CameraTest = ComponentValidationStatus.PresentNotTested("skipped");
+        Results.SpeakerTest = new SpeakerTestResult
+        {
+            Present = true,
+            Tested = false,
+            Result = ValidationResults.PresentNotTested,
+            Reason = "skipped",
+        };
+        Results.MicrophoneTest = new MicrophoneTestResult
+        {
+            Present = true,
+            Tested = false,
+            Result = ValidationResults.PresentNotTested,
+            Reason = "skipped",
+        };
+        Results.CameraTest = new CameraTestResult
+        {
+            Present = true,
+            Tested = false,
+            Result = ValidationResults.PresentNotTested,
+            Reason = "skipped",
+        };
         Results.UsbTest = new UsbTestResult { Tested = false, Result = ValidationResults.PresentNotTested, Reason = "skipped" };
         Results.DisplayOutputTest = new DisplayOutputTestResult { Result = ValidationResults.PresentNotTested, Reason = "skipped" };
         Results.AudioJackTest = new AudioJackTestResult { Result = ValidationResults.PresentNotTested, Reason = "skipped" };
@@ -225,41 +268,111 @@ public partial class FunctionalTestsViewModel : ObservableObject, IAsyncDisposab
         _ = StartCameraStepAsync();
     }
 
-    private async Task StartCameraStepAsync()
+    [RelayCommand]
+    private async Task RetryCameraPreview()
     {
-        CurrentStep = FunctionalTestStep.Camera;
-        StatusMessage = "Starting live camera preview…";
-        var (ok, err) = await _camera.StartPreviewAsync(frame => CameraPreviewFrame = frame);
-        CameraPreviewActive = ok;
-        CameraName = _camera.CameraName;
-        CameraResolution = _camera.Resolution;
-        CameraFps = _camera.FrameRateFps;
+        await StartCameraStepAsync(restartOnly: true);
+    }
 
-        if (ok)
+    private async Task StartCameraStepAsync(bool restartOnly = false)
+    {
+        if (!restartOnly)
+            CurrentStep = FunctionalTestStep.Camera;
+
+        IsCameraStarting = true;
+        CameraPreviewFrame = null;
+        CameraPreviewActive = false;
+        ShowsCameraAccessInstructions = false;
+        CameraHelpTitle = "";
+        CameraStatus = "Starting live camera preview…";
+        StatusMessage = CameraStatus;
+
+        try
         {
-            Results.CameraTest.Present = true;
-            Results.CameraTest.PreviewStarted = true;
-            Results.CameraTest.CameraName = CameraName;
-            Results.CameraTest.DeviceIdHash = _camera.GetDeviceIdHash();
-            Results.CameraTest.Resolution = CameraResolution;
-            Results.CameraTest.Fps = CameraFps;
-            Results.CameraTest.Privacy = new FunctionalTestPrivacy { MediaUploaded = false };
-            StatusMessage = "Can you clearly see the camera preview?";
+            await _camera.StopPreviewAsync();
+
+            var hwnd = await CameraLivePreviewService.ResolveWindowHandleAsync();
+            var (ok, err) = await _camera.StartPreviewAsync(hwnd, frame =>
+            {
+                if (frame is not null)
+                    CameraPreviewFrame = frame;
+            });
+
+            CameraPreviewActive = ok;
+            CameraName = _camera.CameraName;
+            CameraResolution = _camera.Resolution;
+            CameraFps = _camera.FrameRateFps;
+
+            if (ok)
+            {
+                Results.CameraTest.Present = true;
+                Results.CameraTest.PreviewStarted = true;
+                Results.CameraTest.CameraName = CameraName;
+                Results.CameraTest.DeviceIdHash = _camera.GetDeviceIdHash();
+                Results.CameraTest.Resolution = CameraResolution;
+                Results.CameraTest.Fps = CameraFps;
+                Results.CameraTest.Privacy = new FunctionalTestPrivacy { MediaUploaded = false };
+                CameraStatus = "Preview active — confirm you can see yourself.";
+                StatusMessage = "Can you clearly see the camera preview?";
+            }
+            else
+            {
+                Results.CameraTest = new CameraTestResult
+                {
+                    Present = !CameraAccessHelper.IsNoCameraDetected(err),
+                    Tested = true,
+                    PreviewStarted = false,
+                    Result = ValidationResults.Inconclusive,
+                    Reason = err ?? "preview_failed",
+                    Privacy = new FunctionalTestPrivacy { MediaUploaded = false },
+                };
+                ApplyCameraFailureUi(err);
+            }
         }
-        else
+        catch (Exception ex)
         {
             Results.CameraTest = new CameraTestResult
             {
-                Present = false,
+                Present = true,
                 Tested = true,
                 PreviewStarted = false,
                 Result = ValidationResults.Inconclusive,
-                Reason = err ?? "preview_failed",
+                Reason = ex.Message,
                 Privacy = new FunctionalTestPrivacy { MediaUploaded = false },
             };
-            StatusMessage = $"Camera preview unavailable ({err}). Mark failed or skip.";
+            ApplyCameraFailureUi(ex.Message);
         }
-        FunctionalValidationMapper.ApplyLegacyFields(Results);
+        finally
+        {
+            IsCameraStarting = false;
+            FunctionalValidationMapper.ApplyLegacyFields(Results);
+        }
+    }
+
+    private void ApplyCameraFailureUi(string? err)
+    {
+        if (CameraAccessHelper.IsAccessDenied(err))
+        {
+            ShowsCameraAccessInstructions = true;
+            CameraHelpTitle = "Camera access is turned off in Windows";
+            CameraStatus = "Windows is blocking camera access for desktop apps.";
+            StatusMessage = "Follow the steps below to enable your camera, then tap Retry camera.";
+            return;
+        }
+
+        if (CameraAccessHelper.IsNoCameraDetected(err))
+        {
+            ShowsCameraAccessInstructions = false;
+            CameraHelpTitle = "";
+            CameraStatus = "No camera was detected on this device.";
+            StatusMessage = "Connect or enable a camera, then tap Retry camera — or mark the test as failed.";
+            return;
+        }
+
+        ShowsCameraAccessInstructions = false;
+        CameraHelpTitle = "";
+        CameraStatus = err ?? "Camera preview could not start.";
+        StatusMessage = $"Camera preview unavailable. Retry or mark failed.";
     }
 
     [RelayCommand]

@@ -239,6 +239,7 @@ public sealed class CertificationSummaryReport
     public string PerformanceRating { get; set; } = "";
     public string SecurityRating { get; set; } = "";
     public string FunctionalTestResults { get; set; } = "";
+    public List<string> FunctionalTestLines { get; set; } = [];
     public string RefurbisherNotes { get; set; } = "";
     public string RecommendedResaleGrade { get; set; } = "";
     public List<string> Warnings { get; set; } = [];

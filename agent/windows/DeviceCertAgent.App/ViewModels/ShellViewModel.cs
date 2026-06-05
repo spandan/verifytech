@@ -5,6 +5,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using DeviceCertAgent.App.Services;
 using DeviceCertAgent.Core.Models;
+using DeviceCertAgent.Core.Models.V2;
 using DeviceCertAgent.Core.Services;
 using DeviceCertAgent.Core.Services.V2;
 
@@ -48,6 +49,7 @@ public partial class ShellViewModel : ObservableObject
 
         StatusMessage = "Ready when you are.";
         BrandSubtitle = "Trusted device certification for resale and refurbishment";
+        FunctionalTests.ReachedCompleteStep += OnFunctionalTestsReachedComplete;
     }
 
     [ObservableProperty] private AppPage _currentPage = AppPage.Welcome;
@@ -57,10 +59,15 @@ public partial class ShellViewModel : ObservableObject
     [ObservableProperty] private bool _adminModeSelected;
     [ObservableProperty] private ScanSummary? _summary;
     [ObservableProperty] private string _inspectionReport = "";
+    [ObservableProperty] private CertificationSummaryReport? _inspectionReportSummary;
     [ObservableProperty] private ScanSessionSubmitResponse? _certResult;
     [ObservableProperty] private string _errorMessage = "";
     [ObservableProperty] private bool _hasError;
     [ObservableProperty] private string _brandSubtitle;
+    [ObservableProperty] private bool _isPreparingReport;
+    [ObservableProperty] private bool _isReportReady;
+    [ObservableProperty] private string _reportStatusMessage = "";
+    [ObservableProperty] private bool _reportPreparationFailed;
 
     public ObservableCollection<ScanStepProgress> ScanSteps { get; } = [];
 
@@ -68,6 +75,7 @@ public partial class ShellViewModel : ObservableObject
     private ScanSessionStartResponse? _activeSession;
     private DateTime _scanStartedAt;
     private DateTime _scanCompletedAt;
+    private Task? _prepareReportTask;
 
     [RelayCommand]
     private void BeginCertification() => CurrentPage = AppPage.Disclosure;
@@ -184,6 +192,7 @@ public partial class ShellViewModel : ObservableObject
             ScanProgress = 100;
             StatusMessage = "Scan complete.";
 
+            ResetReportPreparation();
             CurrentPage = AppPage.FunctionalTests;
             FunctionalTests.CurrentStep = FunctionalTestStep.Hub;
             StatusMessage = "Complete interactive checks, or skip to continue.";
@@ -197,41 +206,140 @@ public partial class ShellViewModel : ObservableObject
     }
 
     [RelayCommand]
-    private async Task CompleteFunctionalTests()
+    private void ContinueToReport()
     {
-        if (_collectionResult is null) return;
-
-        _collectionResult.FunctionalTests = FunctionalTests.Results;
-        FunctionalTests.FinalizeBeforeSubmit(_collectionResult);
-        var deep = await _deepCert.RunAsync(
-            _collectionResult,
-            AdminModeSelected,
-            FunctionalTests.Results,
-            _scanCts?.Token ?? default);
-        _collectionResult.Certification = deep.Assessment;
-        _collectionResult.Evidence = deep.Evidence;
-
-        Summary = _quality.BuildSummary(_collectionResult, AdminModeSelected ? "Enhanced v2" : "Standard v2");
-        InspectionReport = FormatInspectionReport(_collectionResult.Certification);
-        CurrentPage = AppPage.ResultPreview;
+        FunctionalTests.CurrentStep = FunctionalTestStep.Complete;
+        StartPrepareReportIfNeeded();
     }
 
-    private static string FormatInspectionReport(Core.Models.V2.CertificationAssessmentV2? c)
+    [RelayCommand(CanExecute = nameof(CanViewInspectionReport))]
+    private void ViewInspectionReport()
     {
-        if (c is null) return "";
-        var s = c.Summary;
-        return string.Join(Environment.NewLine + Environment.NewLine,
-        [
-            "── Device Overview ──", s.DeviceOverview,
-            "── Health Summary ──", s.HealthSummary,
-            "── Battery ──", s.BatteryCondition,
-            "── Storage ──", s.StorageCondition,
-            "── Performance ──", s.PerformanceRating,
-            "── Security ──", s.SecurityRating,
-            "── Functional Tests ──", s.FunctionalTestResults,
-            "── Grade ──", $"Recommended resale grade: {s.RecommendedResaleGrade}",
-            "── Refurbisher Notes ──", s.RefurbisherNotes,
-        ]);
+        if (!IsReportReady || _collectionResult is null)
+            return;
+
+        HasError = false;
+        CurrentPage = AppPage.ResultPreview;
+        StatusMessage = "Review your report before submitting.";
+    }
+
+    [RelayCommand(CanExecute = nameof(CanRetryReportPreparation))]
+    private void RetryReportPreparation() => StartPrepareReportIfNeeded(force: true);
+
+    private bool CanViewInspectionReport() => IsReportReady && !IsPreparingReport;
+
+    private bool CanRetryReportPreparation() => !IsPreparingReport && !IsReportReady;
+
+    partial void OnIsReportReadyChanged(bool value) => NotifyReportCommands();
+    partial void OnIsPreparingReportChanged(bool value) => NotifyReportCommands();
+
+    private void NotifyReportCommands()
+    {
+        ViewInspectionReportCommand.NotifyCanExecuteChanged();
+        RetryReportPreparationCommand.NotifyCanExecuteChanged();
+    }
+
+    private void OnFunctionalTestsReachedComplete() => StartPrepareReportIfNeeded();
+
+    private void ResetReportPreparation()
+    {
+        IsPreparingReport = false;
+        IsReportReady = false;
+        ReportStatusMessage = "";
+        ReportPreparationFailed = false;
+        InspectionReport = "";
+        InspectionReportSummary = null;
+        Summary = null;
+        _prepareReportTask = null;
+        NotifyReportCommands();
+    }
+
+    private void StartPrepareReportIfNeeded(bool force = false)
+    {
+        if (_collectionResult is null)
+            return;
+        if (!force && (IsPreparingReport || IsReportReady))
+            return;
+        if (IsPreparingReport)
+            return;
+
+        _prepareReportTask = PrepareInspectionReportAsync();
+    }
+
+    private async Task PrepareInspectionReportAsync()
+    {
+        if (_collectionResult is null)
+            return;
+
+        IsPreparingReport = true;
+        IsReportReady = false;
+        ReportPreparationFailed = false;
+        ReportStatusMessage = "Preparing inspection report…";
+        NotifyReportCommands();
+
+        try
+        {
+            _collectionResult.FunctionalTests = FunctionalTests.Results;
+            FunctionalTests.FinalizeBeforeSubmit(_collectionResult);
+
+            var deep = await Task.Run(async () => await _deepCert.RunAsync(
+                _collectionResult,
+                AdminModeSelected,
+                FunctionalTests.Results,
+                _scanCts?.Token ?? default,
+                runStressBenchmarks: false).ConfigureAwait(false)).ConfigureAwait(true);
+
+            _collectionResult.Certification = deep.Assessment;
+            _collectionResult.Evidence = deep.Evidence;
+
+            Summary = _quality.BuildSummary(_collectionResult, AdminModeSelected ? "Enhanced v2" : "Standard v2");
+            InspectionReportSummary = _collectionResult.Certification?.Summary;
+            InspectionReport = FormatInspectionReport(_collectionResult.Certification);
+            IsReportReady = true;
+            ReportStatusMessage = "Inspection report is ready.";
+        }
+        catch (Exception ex)
+        {
+            _logger.Error("Inspection report build failed", ex);
+            ReportPreparationFailed = true;
+            ReportStatusMessage = "Report preparation failed. Retry when ready.";
+            ShowError($"Could not prepare inspection report: {ex.Message}");
+        }
+        finally
+        {
+            IsPreparingReport = false;
+            NotifyReportCommands();
+        }
+    }
+
+    private static string FormatInspectionReport(CertificationAssessmentV2? c)
+    {
+        if (c?.Summary is not { } s) return "";
+        var lines = new List<string>
+        {
+            $"Recommended resale grade: {s.RecommendedResaleGrade}",
+            "",
+            "Device overview",
+            s.DeviceOverview,
+            "",
+            "Health summary",
+            s.HealthSummary,
+            "",
+            $"Battery: {s.BatteryCondition}",
+            $"Storage: {s.StorageCondition}",
+            $"Performance: {s.PerformanceRating}",
+            $"Security: {s.SecurityRating}",
+            "",
+            "Functional tests",
+        };
+        lines.AddRange(s.FunctionalTestLines.Count > 0 ? s.FunctionalTestLines : [s.FunctionalTestResults]);
+        if (!string.IsNullOrWhiteSpace(s.RefurbisherNotes))
+        {
+            lines.Add("");
+            lines.Add("Refurbisher notes");
+            lines.Add(s.RefurbisherNotes);
+        }
+        return string.Join(Environment.NewLine, lines);
     }
 
     [RelayCommand]

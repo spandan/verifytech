@@ -1,10 +1,11 @@
 using DeviceCertAgent.Core.Models.V2;
 using NAudio.CoreAudioApi;
+using NAudio.CoreAudioApi.Interfaces;
 
 namespace DeviceCertAgent.App.Services;
 
 /// <summary>Detects default audio endpoint changes (headset jack insert/remove).</summary>
-public sealed class AudioJackMonitorService : MMNotificationClient, IDisposable
+public sealed class AudioJackMonitorService : IMMNotificationClient, IDisposable
 {
     private bool _insertDetected;
     private bool _removeDetected;
@@ -29,7 +30,7 @@ public sealed class AudioJackMonitorService : MMNotificationClient, IDisposable
         }
     }
 
-    public override void OnDefaultDeviceChanged(DataFlow flow, Role role, string defaultDeviceId)
+    public void OnDefaultDeviceChanged(DataFlow flow, Role role, string defaultDeviceId)
     {
         if (role != Role.Multimedia) return;
         if (flow == DataFlow.Capture && defaultDeviceId != _initialCaptureId)
@@ -38,9 +39,13 @@ public sealed class AudioJackMonitorService : MMNotificationClient, IDisposable
             _insertDetected = true;
     }
 
-    public override void OnDeviceRemoved(string deviceId) => _removeDetected = true;
+    public void OnDeviceAdded(string deviceId) => _insertDetected = true;
 
-    public override void OnDeviceAdded(string deviceId) => _insertDetected = true;
+    public void OnDeviceRemoved(string deviceId) => _removeDetected = true;
+
+    public void OnDeviceStateChanged(string deviceId, DeviceState newState) { }
+
+    public void OnPropertyValueChanged(string deviceId, PropertyKey key) { }
 
     public AudioJackTestResult BuildResult()
     {

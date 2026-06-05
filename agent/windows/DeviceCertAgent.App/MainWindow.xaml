@@ -130,13 +130,15 @@
           </ItemsControl>
         </StackPanel>
 
-        <!-- Functional tests -->
-        <StackPanel Visibility="{Binding CurrentPage, Converter={StaticResource PageVis}, ConverterParameter=FunctionalTests}"
-                    DataContext="{Binding FunctionalTests}">
+        <!-- Functional tests (visibility binds to shell CurrentPage — do not set DataContext on this panel) -->
+        <StackPanel Visibility="{Binding CurrentPage, Converter={StaticResource PageVis}, ConverterParameter=FunctionalTests}">
+          <StackPanel DataContext="{Binding FunctionalTests}">
           <TextBlock Text="Functional certification" Style="{StaticResource PageTitle}" Margin="0,0,0,8"/>
           <TextBlock Style="{StaticResource BodyText}" Text="{Binding StatusMessage}" Margin="0,0,0,16"/>
 
-          <StackPanel Visibility="{Binding CurrentStep, Converter={StaticResource FuncStepVis}, ConverterParameter=Hub}">
+          <Border Style="{StaticResource CardBorder}" MinHeight="320">
+            <Grid>
+              <StackPanel Visibility="{Binding CurrentStep, Converter={StaticResource FuncStepVis}, ConverterParameter=Hub}">
             <Border Style="{StaticResource CardBorder}" Margin="0,0,0,16">
               <TextBlock Style="{StaticResource BodyText}" TextWrapping="Wrap"
                          Text="Verify display, audio, camera, keyboard, touchpad, and USB. Skipped tests stay not verified — they are never reported as passed."/>
@@ -145,7 +147,7 @@
               <Button Content="Start tests" Style="{StaticResource AccentButton}" Command="{Binding StartTestsCommand}" Margin="0,0,8,0"/>
               <Button Content="Skip all" Style="{StaticResource SecondaryButton}" Command="{Binding SkipAllCommand}" Margin="0,0,8,0"/>
               <Button Content="Continue to report" Style="{StaticResource PrimaryButton}"
-                      Command="{Binding DataContext.CompleteFunctionalTestsCommand, RelativeSource={RelativeSource AncestorType=Window}}"/>
+                      Command="{Binding DataContext.ContinueToReportCommand, RelativeSource={RelativeSource AncestorType=Window}}"/>
             </StackPanel>
           </StackPanel>
 
@@ -184,12 +186,40 @@
             <TextBlock Style="{StaticResource BodyText}" TextWrapping="Wrap" Margin="0,0,0,12"
                        Text="Live preview remains on this device. No images or video are uploaded."/>
             <Border Background="{StaticResource SurfaceMutedBrush}" CornerRadius="8" Height="220" Margin="0,0,0,8">
-              <Image Source="{Binding CameraPreviewFrame}" Stretch="Uniform"/>
+              <Grid>
+                <Image Source="{Binding CameraPreviewFrame}" Stretch="Uniform"/>
+                <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center"
+                            Visibility="{Binding IsCameraStarting, Converter={StaticResource BoolVis}}">
+                  <ProgressBar IsIndeterminate="True" Width="180" Height="8" Margin="0,0,0,10"/>
+                  <TextBlock Text="Starting camera…" Style="{StaticResource BodyText}" HorizontalAlignment="Center"/>
+                </StackPanel>
+              </Grid>
             </Border>
             <TextBlock Style="{StaticResource BodyText}" Margin="0,0,0,8"
                        Text="{Binding CameraName, StringFormat=Camera: {0}}"/>
-            <TextBlock Style="{StaticResource BodyText}" Margin="0,0,0,12"
+            <TextBlock Style="{StaticResource BodyText}" Margin="0,0,0,8"
                        Text="{Binding CameraResolution, StringFormat=Resolution: {0}}"/>
+            <TextBlock Style="{StaticResource BodyText}" Margin="0,0,0,12"
+                       Text="{Binding CameraStatus}" TextWrapping="Wrap"/>
+            <Border Style="{StaticResource InstructionCardBorder}" Margin="0,0,0,12"
+                    Visibility="{Binding ShowsCameraAccessInstructions, Converter={StaticResource BoolVis}}">
+              <StackPanel>
+                <TextBlock Text="{Binding CameraHelpTitle}" FontWeight="SemiBold" FontSize="14"
+                           Foreground="{StaticResource WarningBrush}" Margin="0,0,0,8"/>
+                <TextBlock Style="{StaticResource BodyText}" Margin="0,0,0,10" TextWrapping="Wrap"
+                           Text="Windows must allow desktop apps to use your camera before the live preview can start."/>
+                <ItemsControl ItemsSource="{Binding CameraAccessSteps}" Margin="0,0,0,12">
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                      <TextBlock Style="{StaticResource BodyText}" Text="{Binding}" Margin="0,0,0,6"/>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+                <Button Content="Open Windows camera settings" Command="{Binding OpenCameraSettingsCommand}"
+                        Style="{StaticResource PrimaryButton}" HorizontalAlignment="Left"/>
+              </StackPanel>
+            </Border>
+            <Button Content="Retry camera" Command="{Binding RetryCameraPreviewCommand}" Style="{StaticResource SecondaryButton}" Margin="0,0,0,8"/>
             <Button Content="I can clearly see the preview" Command="{Binding ConfirmCameraPreviewYesCommand}" Style="{StaticResource AccentButton}" Margin="0,0,0,8"/>
             <Button Content="Camera failed" Command="{Binding ConfirmCameraFailedCommand}" Style="{StaticResource SecondaryButton}" HorizontalAlignment="Left"/>
           </StackPanel>
@@ -225,9 +255,29 @@
             </StackPanel>
           </StackPanel>
 
-          <Button Visibility="{Binding CurrentStep, Converter={StaticResource FuncStepVis}, ConverterParameter=Complete}"
-                  Content="View inspection report" Style="{StaticResource AccentButton}" Margin="0,16,0,0"
-                  Command="{Binding DataContext.CompleteFunctionalTestsCommand, RelativeSource={RelativeSource AncestorType=Window}}"/>
+            </Grid>
+          </Border>
+
+          <StackPanel Visibility="{Binding CurrentStep, Converter={StaticResource FuncStepVis}, ConverterParameter=Complete}"
+                      Margin="0,16,0,0">
+            <StackPanel Visibility="{Binding DataContext.IsPreparingReport, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource BoolVis}}"
+                        Margin="0,0,0,12">
+              <ProgressBar IsIndeterminate="True" Height="8" Margin="0,0,0,10"/>
+              <TextBlock Style="{StaticResource BodyText}"
+                         Text="{Binding DataContext.ReportStatusMessage, RelativeSource={RelativeSource AncestorType=Window}}"
+                         TextWrapping="Wrap"/>
+            </StackPanel>
+            <TextBlock Style="{StaticResource BodyText}" Margin="0,0,0,12" TextWrapping="Wrap"
+                       Visibility="{Binding DataContext.IsReportReady, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource BoolVis}}"
+                       Text="Your inspection report is ready to review."/>
+            <Button Content="View inspection report" Style="{StaticResource AccentButton}"
+                    Command="{Binding DataContext.ViewInspectionReportCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                    IsEnabled="{Binding DataContext.IsReportReady, RelativeSource={RelativeSource AncestorType=Window}}"/>
+            <Button Content="Retry report preparation" Style="{StaticResource SecondaryButton}" Margin="0,8,0,0"
+                    Visibility="{Binding DataContext.ReportPreparationFailed, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource BoolVis}}"
+                    Command="{Binding DataContext.RetryReportPreparationCommand, RelativeSource={RelativeSource AncestorType=Window}}"/>
+          </StackPanel>
+          </StackPanel>
         </StackPanel>
 
         <!-- 5 Result preview -->
@@ -235,10 +285,86 @@
           <TextBlock Text="Review before submitting" Style="{StaticResource PageTitle}" Margin="0,0,0,8"/>
           <TextBlock Style="{StaticResource BodyText}" Margin="0,0,0,12" TextWrapping="Wrap"
                      Text="Professional inspection summary — submit to receive your server-signed certificate."/>
-          <Border Style="{StaticResource CardBorder}" Margin="0,0,0,12">
-            <ScrollViewer MaxHeight="200" VerticalScrollBarVisibility="Auto">
-              <TextBlock Text="{Binding InspectionReport}" FontSize="13" TextWrapping="Wrap"
-                         Foreground="{StaticResource TextPrimaryBrush}"/>
+          <StackPanel Visibility="{Binding IsPreparingReport, Converter={StaticResource BoolVis}}" Margin="0,0,0,12">
+            <ProgressBar IsIndeterminate="True" Height="8" Margin="0,0,0,10"/>
+            <TextBlock Style="{StaticResource BodyText}" Text="{Binding ReportStatusMessage}" TextWrapping="Wrap"/>
+          </StackPanel>
+          <Border Style="{StaticResource CardBorder}" Margin="0,0,0,12" DataContext="{Binding InspectionReportSummary}">
+            <ScrollViewer MaxHeight="360" VerticalScrollBarVisibility="Auto">
+              <StackPanel>
+                <Border Style="{StaticResource HeroCardBorder}" Padding="18" Margin="0,0,0,18">
+                  <Grid>
+                    <Grid.ColumnDefinitions>
+                      <ColumnDefinition Width="*"/>
+                      <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Grid.Column="0">
+                      <TextBlock Text="Recommended resale grade" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}"/>
+                      <TextBlock Text="{Binding RecommendedResaleGrade, TargetNullValue=—}" Style="{StaticResource ReportGradeValue}" Margin="0,4,0,0"/>
+                    </StackPanel>
+                    <Border Grid.Column="1" Background="{StaticResource SurfaceBrush}" CornerRadius="8" Padding="12,8" VerticalAlignment="Center">
+                      <TextBlock Text="Inspection summary" FontWeight="SemiBold" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}"/>
+                    </Border>
+                  </Grid>
+                </Border>
+
+                <TextBlock Style="{StaticResource ReportSectionTitle}" Text="DEVICE OVERVIEW"/>
+                <TextBlock Style="{StaticResource ReportSectionBody}" Text="{Binding DeviceOverview}" Margin="0,0,0,16"/>
+
+                <TextBlock Style="{StaticResource ReportSectionTitle}" Text="HEALTH SUMMARY"/>
+                <TextBlock Style="{StaticResource ReportSectionBody}" Text="{Binding HealthSummary}" Margin="0,0,0,16"/>
+
+                <Grid Margin="0,0,0,16">
+                  <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                  </Grid.ColumnDefinitions>
+                  <StackPanel Grid.Column="0" Margin="0,0,10,0">
+                    <TextBlock Style="{StaticResource ReportSectionTitle}" Text="BATTERY"/>
+                    <TextBlock Style="{StaticResource ReportSectionBody}" Text="{Binding BatteryCondition}"/>
+                  </StackPanel>
+                  <StackPanel Grid.Column="1" Margin="10,0,0,0">
+                    <TextBlock Style="{StaticResource ReportSectionTitle}" Text="STORAGE"/>
+                    <TextBlock Style="{StaticResource ReportSectionBody}" Text="{Binding StorageCondition}" TextWrapping="Wrap"/>
+                  </StackPanel>
+                </Grid>
+
+                <Grid Margin="0,0,0,16">
+                  <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                  </Grid.ColumnDefinitions>
+                  <StackPanel Grid.Column="0" Margin="0,0,10,0">
+                    <TextBlock Style="{StaticResource ReportSectionTitle}" Text="PERFORMANCE"/>
+                    <TextBlock Style="{StaticResource ReportSectionBody}" Text="{Binding PerformanceRating}"/>
+                  </StackPanel>
+                  <StackPanel Grid.Column="1" Margin="10,0,0,0">
+                    <TextBlock Style="{StaticResource ReportSectionTitle}" Text="SECURITY"/>
+                    <TextBlock Style="{StaticResource ReportSectionBody}" Text="{Binding SecurityRating}"/>
+                  </StackPanel>
+                </Grid>
+
+                <TextBlock Style="{StaticResource ReportSectionTitle}" Text="FUNCTIONAL TESTS"/>
+                <ItemsControl ItemsSource="{Binding FunctionalTestLines}" Margin="0,0,0,16">
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                      <Grid Margin="0,0,0,6">
+                        <Grid.ColumnDefinitions>
+                          <ColumnDefinition Width="Auto"/>
+                          <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Text="•" Style="{StaticResource ReportSectionBody}" Margin="0,0,8,0"/>
+                        <TextBlock Grid.Column="1" Text="{Binding}" Style="{StaticResource ReportSectionBody}"/>
+                      </Grid>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+
+                <TextBlock Style="{StaticResource ReportSectionTitle}" Text="REFURBISHER NOTES"/>
+                <TextBlock Style="{StaticResource ReportSectionBody}"
+                           Text="{Binding RefurbisherNotes, TargetNullValue=No additional notes.}"
+                           Foreground="{StaticResource TextSecondaryBrush}"/>
+              </StackPanel>
             </ScrollViewer>
           </Border>
           <Border Style="{StaticResource CardBorder}" Margin="0,0,0,16" DataContext="{Binding Summary}">

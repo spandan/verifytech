@@ -16,33 +16,41 @@ public sealed class DeepCertificationOrchestrator
         CollectionResult collected,
         bool adminMode,
         FunctionalCertificationResults? functional,
-        CancellationToken ct = default)
+        CancellationToken ct = default,
+        bool runStressBenchmarks = true)
     {
         var warnings = collected.Metadata.CollectionWarnings;
         var assessment = new CertificationAssessmentV2 { AssessmentVersion = "2.3" };
 
-        var (battery, batteryRaw) = new BatteryHistoryAnalyzer().Analyze(adminMode, warnings);
+        var (battery, batteryRaw) = new BatteryHistoryAnalyzer().Analyze(
+            adminMode, warnings, includeHistoryReport: runStressBenchmarks);
         assessment.Battery = battery;
 
         var (storage, smartJson) = new NvmeSmartDiagnosticsCollector().Collect(adminMode, warnings);
         assessment.Storage = storage;
 
         assessment.Memory = new MemoryDiagnosticsCollector().Collect(warnings);
-        assessment.Memory = new MemoryStabilityValidator().Run(assessment.Memory, ct);
+        if (runStressBenchmarks)
+            assessment.Memory = new MemoryStabilityValidator().Run(assessment.Memory, ct);
 
         assessment.Cpu = new CpuIntelligenceCollector().Collect(warnings);
         assessment.Thermals = new ThermalHealthCollector().Collect(assessment.Storage, warnings);
 
-        var (thermals, telemetryBytes, cpu) = await new ThermalBenchmarkTelemetry().RunAsync(
-            assessment.Thermals, assessment.Cpu, ct);
-        assessment.Thermals = thermals;
-        assessment.Cpu = cpu;
+        byte[]? telemetryBytes = null;
+        if (runStressBenchmarks)
+        {
+            var (thermals, telemetry, cpu) = await new ThermalBenchmarkTelemetry().RunAsync(
+                assessment.Thermals, assessment.Cpu, ct);
+            assessment.Thermals = thermals;
+            assessment.Cpu = cpu;
+            telemetryBytes = telemetry;
 
-        var (benchmark, cpu2, thermals2) = await new LightweightBenchmarkService().RunAsync(
-            collected, assessment.Thermals, assessment.Cpu, ct);
-        assessment.Benchmark = benchmark;
-        assessment.Cpu = cpu2;
-        assessment.Thermals = thermals2;
+            var (benchmark, cpu2, thermals2) = await new LightweightBenchmarkService().RunAsync(
+                collected, assessment.Thermals, assessment.Cpu, ct);
+            assessment.Benchmark = benchmark;
+            assessment.Cpu = cpu2;
+            assessment.Thermals = thermals2;
+        }
 
         assessment.Display = new DisplayDiagnosticsCollector().Collect(warnings);
         assessment.Security = new SecurityAssessmentCollector().Collect(adminMode, warnings);

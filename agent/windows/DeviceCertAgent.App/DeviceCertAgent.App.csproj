@@ -6,6 +6,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <UseWPF>true</UseWPF>
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
     <AssemblyName>DeviceCertAgent</AssemblyName>
     <RootNamespace>DeviceCertAgent.App</RootNamespace>
     <Version>2.3.0</Version>
@@ -13,6 +14,7 @@
     <Company>VerifyTech</Company>
     <Description>VerifyTech Windows device certification agent</Description>
     <SupportedOSPlatformVersion>10.0.17763.0</SupportedOSPlatformVersion>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
   </PropertyGroup>
 
   <ItemGroup>

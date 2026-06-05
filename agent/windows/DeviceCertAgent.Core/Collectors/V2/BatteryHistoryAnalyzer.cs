@@ -6,12 +6,16 @@ namespace DeviceCertAgent.Core.Collectors.V2;
 
 public sealed class BatteryHistoryAnalyzer
 {
-    public (BatteryAssessment Assessment, byte[]? RawReportBytes) Analyze(bool adminMode, List<string> warnings)
+    public (BatteryAssessment Assessment, byte[]? RawReportBytes) Analyze(
+        bool adminMode,
+        List<string> warnings,
+        bool includeHistoryReport = true)
     {
         var assessment = new BatteryIntelligenceCollector().Collect(adminMode, warnings);
-        if (!adminMode)
+        if (!adminMode || !includeHistoryReport)
         {
-            warnings.Add("battery_v2.1: admin required for full capacity history");
+            if (!adminMode)
+                warnings.Add("battery_v2.1: admin required for full capacity history");
             return (assessment, null);
         }
 

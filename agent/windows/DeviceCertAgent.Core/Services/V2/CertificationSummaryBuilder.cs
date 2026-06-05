@@ -18,9 +18,10 @@ public sealed class CertificationSummaryBuilder
                 $"Drive {s.Index}: {s.Condition.Value ?? "?"} ({s.HealthPercent.Value ?? 0:0}% health)"))
             : "No storage assessment";
 
-        var functionalText = functional is null
-            ? "Functional tests not completed"
-            : FormatFunctional(functional);
+        var functionalLines = functional is null
+            ? ["Functional tests not completed"]
+            : FormatFunctionalLines(functional);
+        var functionalText = string.Join(Environment.NewLine, functionalLines);
 
         return new CertificationSummaryReport
         {
@@ -40,28 +41,33 @@ public sealed class CertificationSummaryBuilder
                 $"Secure Boot: {FormatTri(assessment.Security.SecureBoot)}. " +
                 $"Encryption: {FormatTri(assessment.Security.DeviceEncryption)}.",
             FunctionalTestResults = functionalText,
-            RefurbisherNotes = assessment.ResaleGrade.RefurbishmentNeeded.Value ?? "",
+            FunctionalTestLines = functionalLines,
+            RefurbisherNotes = string.IsNullOrWhiteSpace(assessment.ResaleGrade.RefurbishmentNeeded.Value)
+                ? "No additional refurbisher actions required."
+                : assessment.ResaleGrade.RefurbishmentNeeded.Value!,
             RecommendedResaleGrade = assessment.ResaleGrade.Grade.Value ?? "C",
             Warnings = warnings,
         };
     }
 
-    private static string FormatFunctional(FunctionalCertificationResults f)
+    private static List<string> FormatFunctionalLines(FunctionalCertificationResults f)
     {
         var parts = new List<string>();
         if (!f.Display.Skipped)
-            parts.Add($"Display grade: {f.Display.Grade ?? (f.Display.DeadPixelTestPassed == true ? "Pass" : "Review")}");
-        parts.Add($"Speaker: {FormatValidation(f.SpeakerTest)}");
-        parts.Add($"Microphone: {FormatValidation(f.MicrophoneTest)}");
-        parts.Add($"Camera: {FormatValidation(f.CameraTest)}");
-        parts.Add($"USB: {FormatValidation(f.UsbTest)}");
-        parts.Add($"Display output: {FormatValidation(f.DisplayOutputTest)}");
-        parts.Add($"Audio jack: {FormatValidation(f.AudioJackTest)}");
+            parts.Add($"Display — {f.Display.Grade ?? (f.Display.DeadPixelTestPassed == true ? "Pass" : "Review")}");
+        parts.Add($"Speakers — {FormatValidation(f.SpeakerTest)}");
+        parts.Add($"Microphone — {FormatValidation(f.MicrophoneTest)}");
+        parts.Add($"Camera — {FormatValidation(f.CameraTest)}");
+        parts.Add($"USB — {FormatValidation(f.UsbTest)}");
+        parts.Add($"Display output — {FormatValidation(f.DisplayOutputTest)}");
+        parts.Add($"Audio jack — {FormatValidation(f.AudioJackTest)}");
         if (!f.Keyboard.Skipped)
-            parts.Add(f.Keyboard.Passed == true ? "Keyboard: Pass" : $"Keyboard: Missing {string.Join(", ", f.Keyboard.KeysMissing)}");
+            parts.Add(f.Keyboard.Passed == true
+                ? "Keyboard — Pass"
+                : $"Keyboard — Missing keys: {string.Join(", ", f.Keyboard.KeysMissing)}");
         if (!f.Touchpad.Skipped)
-            parts.Add($"Touchpad: {FormatTri(f.Touchpad.Operational)}");
-        return parts.Count > 0 ? string.Join(". ", parts) : "Skipped";
+            parts.Add($"Touchpad — {FormatTri(f.Touchpad.Operational)}");
+        return parts.Count > 0 ? parts : ["All functional tests skipped"];
     }
 
     private static string FormatValidation(ComponentValidationStatus s) =>

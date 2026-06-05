@@ -108,6 +108,34 @@
     </Setter>
   </Style>
 
+  <Style x:Key="ReportSectionTitle" TargetType="TextBlock">
+    <Setter Property="FontSize" Value="11"/>
+    <Setter Property="FontWeight" Value="SemiBold"/>
+    <Setter Property="Foreground" Value="{StaticResource AccentBrush}"/>
+    <Setter Property="Margin" Value="0,0,0,6"/>
+  </Style>
+
+  <Style x:Key="ReportSectionBody" TargetType="TextBlock">
+    <Setter Property="FontSize" Value="13"/>
+    <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
+    <Setter Property="TextWrapping" Value="Wrap"/>
+    <Setter Property="LineHeight" Value="20"/>
+  </Style>
+
+  <Style x:Key="ReportGradeValue" TargetType="TextBlock">
+    <Setter Property="FontSize" Value="36"/>
+    <Setter Property="FontWeight" Value="Bold"/>
+    <Setter Property="Foreground" Value="{StaticResource AccentBrush}"/>
+  </Style>
+
+  <Style x:Key="InstructionCardBorder" TargetType="Border">
+    <Setter Property="Background" Value="#FFF7ED"/>
+    <Setter Property="BorderBrush" Value="#FDBA74"/>
+    <Setter Property="BorderThickness" Value="1"/>
+    <Setter Property="CornerRadius" Value="10"/>
+    <Setter Property="Padding" Value="16"/>
+  </Style>
+
   <Style x:Key="TextBoxStyle" TargetType="TextBox">
     <Setter Property="Padding" Value="12,8"/>
     <Setter Property="FontSize" Value="14"/>

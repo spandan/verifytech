@@ -81,7 +81,7 @@ public sealed class EvidenceBundleBuilder
 
         try
         {
-            if (OperatingSystem.IsWindows())
+            if (OperatingSystem.IsWindows() && !string.IsNullOrEmpty(asm.Location))
             {
                 var cert = System.Security.Cryptography.X509Certificates.X509Certificate.CreateFromSignedFile(asm.Location);
                 if (cert is not null)
