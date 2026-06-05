@@ -38,3 +38,26 @@ public sealed class StepStatusIconConverter : IValueConverter
     public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) =>
         throw new NotSupportedException();
 }
+
+public sealed class StepStatusBrushConverter : IValueConverter
+{
+    public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+    {
+        var key = value is ScanStepStatus status
+            ? status switch
+            {
+                ScanStepStatus.Completed => "SuccessBrush",
+                ScanStepStatus.Warning => "WarningBrush",
+                ScanStepStatus.Failed => "ErrorBrush",
+                ScanStepStatus.InProgress => "AccentBrush",
+                _ => "TextSecondaryBrush",
+            }
+            : "TextSecondaryBrush";
+
+        return System.Windows.Application.Current?.FindResource(key)
+            ?? System.Windows.Media.Brushes.Gray;
+    }
+
+    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) =>
+        throw new NotSupportedException();
+}

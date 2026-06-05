@@ -1,0 +1,9 @@
+<Project>
+  <PropertyGroup>
+    <!-- Passed from scripts/build-agent: /p:VerifyTechBuildChannel=production -->
+    <VerifyTechBuildChannel Condition="'$(VerifyTechBuildChannel)' == ''">production</VerifyTechBuildChannel>
+    <DefineConstants Condition="'$(VerifyTechBuildChannel)' == 'production'">$(DefineConstants);PRODUCTION_BUILD</DefineConstants>
+    <DefineConstants Condition="'$(VerifyTechBuildChannel)' == 'staging'">$(DefineConstants);STAGING_BUILD</DefineConstants>
+    <DefineConstants Condition="'$(VerifyTechBuildChannel)' == 'development'">$(DefineConstants);DEV_BUILD</DefineConstants>
+  </PropertyGroup>
+</Project>

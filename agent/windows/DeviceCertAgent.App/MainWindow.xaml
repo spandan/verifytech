@@ -9,8 +9,8 @@
   <Window.Resources>
     <conv:PageVisibilityConverter x:Key="PageVis"/>
     <conv:StepStatusIconConverter x:Key="StepIcon"/>
+    <conv:StepStatusBrushConverter x:Key="StepBrush"/>
     <conv:BoolVisConverter x:Key="BoolVis"/>
-    <conv:DevVisibilityConverter x:Key="DevVis"/>
   </Window.Resources>
 
   <Grid Margin="28">
@@ -29,8 +29,6 @@
         <StackPanel>
           <TextBlock Text="VerifyTech Agent" FontSize="20" FontWeight="SemiBold" Foreground="{StaticResource TextPrimaryBrush}"/>
           <TextBlock Text="{Binding BrandSubtitle}" FontSize="13" Foreground="{StaticResource TextSecondaryBrush}"/>
-          <TextBlock Text="{Binding DeveloperEndpointLabel}" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}"
-                     Visibility="{Binding ShowDeveloperUi, Converter={StaticResource DevVis}}" Margin="0,4,0,0"/>
         </StackPanel>
       </StackPanel>
     </StackPanel>
@@ -119,10 +117,11 @@
                 <Border Style="{StaticResource StepCardBorder}" Margin="4">
                   <StackPanel>
                     <TextBlock Text="{Binding Status, Converter={StaticResource StepIcon}}" FontSize="18" FontWeight="Bold"
-                               Foreground="{StaticResource AccentBrush}"/>
+                               Foreground="{Binding Status, Converter={StaticResource StepBrush}}"/>
                     <TextBlock Text="{Binding Title}" FontSize="13" FontWeight="SemiBold" Margin="0,6,0,0"
                                Foreground="{StaticResource TextPrimaryBrush}"/>
-                    <TextBlock Text="{Binding Detail}" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}"/>
+                    <TextBlock Text="{Binding Detail}" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}"
+                               TextWrapping="Wrap"/>
                   </StackPanel>
                 </Border>
               </DataTemplate>
@@ -132,23 +131,30 @@
 
         <!-- 5 Result preview -->
         <StackPanel Visibility="{Binding CurrentPage, Converter={StaticResource PageVis}, ConverterParameter=ResultPreview}">
-          <TextBlock Text="Scan results" Style="{StaticResource PageTitle}" Margin="0,0,0,16"/>
-          <Border Style="{StaticResource CardBorder}" Margin="0,0,0,20" DataContext="{Binding Summary}">
+          <TextBlock Text="Review before submitting" Style="{StaticResource PageTitle}" Margin="0,0,0,8"/>
+          <TextBlock Style="{StaticResource BodyText}" Margin="0,0,0,16" TextWrapping="Wrap"
+                     Text="Confirm the hardware details below. When you submit, VerifyTech receives a diagnostic report to issue your certificate. Personal files and browsing data are never included."/>
+          <Border Style="{StaticResource CardBorder}" Margin="0,0,0,16" DataContext="{Binding Summary}">
             <Grid>
               <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*"/>
                 <ColumnDefinition Width="*"/>
               </Grid.ColumnDefinitions>
               <StackPanel Grid.Column="0" Margin="0,0,12,0">
-                <TextBlock Text="{Binding DeviceName, StringFormat=Device: {0}}" FontWeight="SemiBold"/>
+                <TextBlock Text="Device" FontWeight="SemiBold" Foreground="{StaticResource TextPrimaryBrush}" Margin="0,0,0,8"/>
+                <TextBlock Style="{StaticResource BodyText}" Text="{Binding DeviceName, StringFormat=Name: {0}}"/>
                 <TextBlock Style="{StaticResource BodyText}" Text="{Binding OsVersion, StringFormat=OS: {0}}"/>
                 <TextBlock Style="{StaticResource BodyText}" Text="{Binding Cpu, StringFormat=CPU: {0}}"/>
                 <TextBlock Style="{StaticResource BodyText}" Text="{Binding Ram, StringFormat=RAM: {0}}"/>
                 <TextBlock Style="{StaticResource BodyText}" Text="{Binding Storage, StringFormat=Storage: {0}}"/>
+                <TextBlock Style="{StaticResource BodyText}" Text="{Binding Display, StringFormat=Display: {0}}"/>
               </StackPanel>
               <StackPanel Grid.Column="1">
+                <TextBlock Text="Health &amp; checks" FontWeight="SemiBold" Foreground="{StaticResource TextPrimaryBrush}" Margin="0,0,0,8"/>
                 <TextBlock Style="{StaticResource BodyText}" Text="{Binding Battery, StringFormat=Battery: {0}}"/>
                 <TextBlock Style="{StaticResource BodyText}" Text="{Binding StorageHealth, StringFormat=Storage health: {0}}"/>
+                <TextBlock Style="{StaticResource BodyText}" Text="{Binding Graphics, StringFormat=Graphics: {0}}"/>
+                <TextBlock Style="{StaticResource BodyText}" Text="{Binding Security, StringFormat=Security: {0}}"/>
                 <TextBlock Style="{StaticResource BodyText}" Text="{Binding CoreChecks, StringFormat=Checks: {0}}"/>
                 <TextBlock Style="{StaticResource BodyText}" Text="{Binding ScanType, StringFormat=Scan: {0}}"/>
                 <TextBlock Foreground="{StaticResource AccentBrush}" Margin="0,8,0,0"
@@ -156,10 +162,25 @@
               </StackPanel>
             </Grid>
           </Border>
+          <Border Style="{StaticResource CardBorder}" Margin="0,0,0,20" DataContext="{Binding Summary}"
+                  Visibility="{Binding HasWarnings, Converter={StaticResource BoolVis}}">
+            <StackPanel>
+              <TextBlock Text="Collection notes" FontWeight="SemiBold" Foreground="{StaticResource TextPrimaryBrush}" Margin="0,0,0,8"/>
+              <ItemsControl ItemsSource="{Binding Warnings}">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate>
+                    <TextBlock Style="{StaticResource BodyText}" Text="{Binding StringFormat=• {0}}" Margin="0,0,0,4"/>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+            </StackPanel>
+          </Border>
           <StackPanel Orientation="Horizontal">
-            <Button Content="Submit for certificate" Style="{StaticResource AccentButton}" Command="{Binding SubmitCertificationCommand}" Margin="0,0,10,0"/>
-            <Button Content="Start over" Style="{StaticResource SecondaryButton}" Command="{Binding BackToWelcomeCommand}"/>
+            <Button Content="Submit to VerifyTech" Style="{StaticResource AccentButton}" Command="{Binding SubmitCertificationCommand}" Margin="0,0,10,0"/>
+            <Button Content="Scan again" Style="{StaticResource SecondaryButton}" Command="{Binding BackToWelcomeCommand}"/>
           </StackPanel>
+          <TextBlock Text="{Binding ErrorMessage}" Foreground="{StaticResource ErrorBrush}" Margin="0,12,0,0"
+                     Visibility="{Binding HasError, Converter={StaticResource BoolVis}}"/>
         </StackPanel>
 
         <!-- 6 Submitting -->

@@ -6,11 +6,6 @@ namespace DeviceCertAgent.Core.Collectors;
 
 public sealed class WindowsIdentityCollector
 {
-    private static readonly HashSet<int> LaptopChassisTypes =
-    [
-        8, 9, 10, 11, 12, 14, 18, 21, 30, 31, 32,
-    ];
-
     public Tier1Identity Collect(List<string> warnings)
     {
         var system = WmiHelper.Query("SELECT Manufacturer, Model, TotalPhysicalMemory FROM Win32_ComputerSystem").FirstOrDefault();
@@ -54,21 +49,8 @@ public sealed class WindowsIdentityCollector
         };
     }
 
-    private static string DetectDeviceType()
-    {
-        var enclosures = WmiHelper.Query("SELECT ChassisTypes FROM Win32_SystemEnclosure");
-        foreach (var row in enclosures)
-        {
-            var raw = SafeConvert.ToString(row.GetValueOrDefault("ChassisTypes"));
-            if (raw is null) continue;
-            foreach (var part in raw.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
-            {
-                if (int.TryParse(part, out var chassis) && LaptopChassisTypes.Contains(chassis))
-                    return "laptop";
-            }
-        }
-        return "desktop";
-    }
+    private static string DetectDeviceType() =>
+        ChassisHelper.IsLaptopChassis() ? "laptop" : "desktop";
 
     private static bool IsPlaceholder(string? value)
     {

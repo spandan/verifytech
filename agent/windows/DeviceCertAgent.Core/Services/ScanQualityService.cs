@@ -1,4 +1,5 @@
 using DeviceCertAgent.Core.Models;
+using DeviceCertAgent.Core.Utilities;
 
 namespace DeviceCertAgent.Core.Services;
 
@@ -39,6 +40,17 @@ public sealed class ScanQualityService
             .Select(d => d.HealthPercent!.Value)
             .ToList();
 
+        var security = result.Tier3.Security;
+        var securityParts = new List<string>();
+        if (security.TpmPresent == true)
+            securityParts.Add($"TPM {security.TpmVersion ?? "present"}");
+        else if (security.TpmPresent == false)
+            securityParts.Add("TPM not detected");
+        if (security.SecureBootEnabled == true)
+            securityParts.Add("Secure Boot on");
+        else if (security.SecureBootEnabled == false)
+            securityParts.Add("Secure Boot off");
+
         return new ScanSummary
         {
             DeviceName = $"{result.Tier1.Manufacturer} {result.Tier1.Model}".Trim(),
@@ -46,13 +58,19 @@ public sealed class ScanQualityService
             Cpu = result.Tier1.CpuModel,
             Ram = $"{result.Tier1.RamTotalGb:0}GB",
             Storage = storageDesc,
-            Battery = result.Tier2.Battery.HealthPercent is not null
-                ? $"{result.Tier2.Battery.HealthPercent:0}%"
-                : result.Tier2.Battery.Present == false ? "Not present" : "N/A",
+            Battery = FormatBatterySummary(result.Tier2.Battery),
             StorageHealth = healths.Count > 0 ? $"{healths.Average():0}%" : "N/A",
+            Display = result.Tier2.Display.Resolution ?? "N/A",
+            Graphics = result.Tier2.Graphics.GpuModel ?? "N/A",
+            Security = securityParts.Count > 0 ? string.Join(" · ", securityParts) : "N/A",
             CoreChecks = $"{functionalCount}/8 passed",
             CompletenessPercent = ComputeCompleteness(result),
             ScanType = scanType,
+            Warnings = result.Metadata.CollectionWarnings
+                .Where(w => !string.IsNullOrWhiteSpace(w))
+                .Distinct()
+                .Take(8)
+                .ToList(),
         };
     }
 
@@ -62,6 +80,21 @@ public sealed class ScanQualityService
         !string.IsNullOrWhiteSpace(result.Tier1.Manufacturer) &&
         !string.IsNullOrWhiteSpace(result.Tier1.Model) &&
         result.Tier1.RamTotalGb > 0;
+
+    private static string FormatBatterySummary(BatteryInfo battery)
+    {
+        if (battery.Present == true)
+        {
+            if (battery.HealthPercent is not null)
+                return $"{battery.HealthPercent:0}%";
+            return "Present (level unknown)";
+        }
+
+        if (battery.Present == false)
+            return ChassisHelper.IsLaptopChassis() ? "Not reported (laptop)" : "Not present";
+
+        return "N/A";
+    }
 
     private static int CountFunctional(FunctionalReadiness fr)
     {

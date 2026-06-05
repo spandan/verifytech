@@ -15,19 +15,22 @@ public sealed class ScanSessionFlowService : IDisposable
     {
         _settings = settings;
         _api = new ApiClient(settings.ApiBaseUrl, settings.AgentVersion, settings.BuildChannel);
+        _logger.Info(
+            $"API configured: {_api.BaseUrl} (channel={settings.BuildChannel}, env={settings.AppEnv})");
     }
 
     public async Task<ScanSessionStartResponse> StartSessionAsync(CancellationToken ct = default)
     {
-        _logger.Info($"Starting scan session ({_settings.BuildChannel})");
+        var endpoint = _api.EndpointUrl("api/scan-sessions/start");
+        _logger.Info($"Starting scan session at {endpoint}");
         try
         {
             return await _api.StartScanSessionAsync(_settings.AgentVersion, _settings.BuildChannel, ct);
         }
         catch (Exception ex)
         {
-            _logger.Error("Failed to start scan session", ex);
-            throw MapFriendly(ex);
+            _logger.Error($"Failed to start scan session at {endpoint}", ex);
+            throw MapFriendly(ex, endpoint);
         }
     }
 
@@ -57,6 +60,7 @@ public sealed class ScanSessionFlowService : IDisposable
         };
 
         _logger.Info($"Submitting scan session {MaskId(session.SessionId)}");
+        var endpoint = _api.EndpointUrl($"api/scan-sessions/{session.SessionId}/submit");
         try
         {
             var result = await _api.SubmitScanSessionAsync(session.SessionId, payload, ct);
@@ -65,26 +69,29 @@ public sealed class ScanSessionFlowService : IDisposable
         }
         catch (Exception ex)
         {
-            _logger.Error("Scan submission failed", ex);
-            throw MapFriendly(ex);
+            _logger.Error($"Scan submission failed at {endpoint}", ex);
+            throw MapFriendly(ex, endpoint);
         }
     }
 
     private static string MaskId(string id) =>
         id.Length <= 8 ? "****" : $"{id[..4]}…{id[^4..]}";
 
-    private static Exception MapFriendly(Exception ex) => ex switch
+    private static Exception MapFriendly(Exception ex, string endpointUrl) => ex switch
     {
         HttpRequestException { Message: var m } when m.Contains("410") || m.Contains("expired", StringComparison.OrdinalIgnoreCase)
             => new InvalidOperationException("Your scan session expired. Please start a new certification scan."),
         HttpRequestException { Message: var m } when m.Contains("409")
             => new InvalidOperationException("This scan was already submitted."),
         HttpRequestException { Message: var m } when m.Contains("503") || m.Contains("502")
-            => new InvalidOperationException("The VerifyTech server is temporarily unavailable. Try again shortly."),
-        HttpRequestException
-            => new InvalidOperationException("Unable to reach VerifyTech. Check your internet connection and try again."),
+            => new InvalidOperationException(
+                $"The VerifyTech server is temporarily unavailable.\n\nEndpoint: {endpointUrl}\n\nDetails: {m}"),
+        HttpRequestException hre
+            => new InvalidOperationException(
+                $"Unable to reach VerifyTech. Check your internet connection and try again.\n\nEndpoint: {endpointUrl}\n\nDetails: {hre.Message}"),
         TaskCanceledException
-            => new InvalidOperationException("The request timed out. Check your connection and try again."),
+            => new InvalidOperationException(
+                $"The request timed out. Check your connection and try again.\n\nEndpoint: {endpointUrl}"),
         _ => ex,
     };
 

@@ -129,9 +129,9 @@ public sealed class SecureEndpointResolver
 #elif STAGING_BUILD
         return new BuildMetadata(AgentConfig.BuildChannelStaging, false, false);
 #elif DEV_BUILD
-        return new BuildMetadata(AgentConfig.BuildChannelDevelopment, true, true);
+        return new BuildMetadata(AgentConfig.BuildChannelDevelopment, true, false);
 #else
-        return new BuildMetadata(AgentConfig.BuildChannelDevelopment, true, true);
+        return new BuildMetadata(AgentConfig.BuildChannelDevelopment, true, false);
 #endif
     }
 
@@ -147,6 +147,9 @@ public sealed class SecureEndpointResolver
                     break;
                 case "--mock-api":
                     options.MockApi = true;
+                    break;
+                case "--enhanced-scan":
+                    options.EnhancedScanOnStartup = true;
                     break;
             }
         }

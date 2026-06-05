@@ -3,6 +3,7 @@ using System.Net.Http;
 using System.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using DeviceCertAgent.App.Services;
 using DeviceCertAgent.Core.Models;
 using DeviceCertAgent.Core.Services;
 
@@ -29,11 +30,13 @@ public partial class ShellViewModel : ObservableObject
     private readonly AgentLogger _logger = new();
     private readonly ScanSessionFlowService? _sessionFlow;
     private readonly MockScanSessionFlowService? _mockFlow;
+    private readonly AppLaunchOptions _launch;
     private CancellationTokenSource? _scanCts;
 
     public ShellViewModel(AgentRuntimeSettings settings, AppLaunchOptions launch)
     {
         _settings = settings;
+        _launch = launch;
         if (settings.MockApi)
             _mockFlow = new MockScanSessionFlowService();
         else
@@ -53,11 +56,6 @@ public partial class ShellViewModel : ObservableObject
     [ObservableProperty] private string _errorMessage = "";
     [ObservableProperty] private bool _hasError;
     [ObservableProperty] private string _brandSubtitle;
-
-    public bool ShowDeveloperUi => _settings.ShowDeveloperUi;
-    public string DeveloperEndpointLabel => _settings.ShowDeveloperUi
-        ? $"{_settings.AppEnv} · {_settings.ApiBaseUrl}"
-        : "";
 
     public ObservableCollection<ScanStepProgress> ScanSteps { get; } = [];
 
@@ -86,8 +84,8 @@ public partial class ShellViewModel : ObservableObject
     private void ChooseEnhancedScan()
     {
         var dialog = MessageBox.Show(
-            "Enhanced scan may request administrator access for SMART storage health, firmware details, and deeper security checks.\n\n" +
-            "You can decline and we will continue with a standard scan.",
+            "Enhanced scan uses administrator access for SMART storage health, firmware details, and deeper security checks.\n\n" +
+            "VerifyTech will restart with administrator privileges.",
             "Enhanced administrator scan",
             MessageBoxButton.YesNoCancel,
             MessageBoxImage.Question);
@@ -95,17 +93,51 @@ public partial class ShellViewModel : ObservableObject
         if (dialog == MessageBoxResult.Cancel)
             return;
 
-        AdminModeSelected = dialog == MessageBoxResult.Yes;
-        if (AdminModeSelected && !EnhancedScanService.IsRunningAsAdmin())
+        if (dialog == MessageBoxResult.No)
         {
+            AdminModeSelected = false;
+            _ = RunScanAsync();
+            return;
+        }
+
+        if (!EnhancedScanService.IsRunningAsAdmin())
+        {
+            if (AdminElevationService.TryRelaunchAsAdmin(["--enhanced-scan"]))
+            {
+                Application.Current.Shutdown();
+                return;
+            }
+
             MessageBox.Show(
-                "Administrator access was not granted. Continuing with the standard scan.",
+                "Administrator access was not granted. You can run a basic scan instead.",
                 "VerifyTech Agent",
                 MessageBoxButton.OK,
                 MessageBoxImage.Information);
-            AdminModeSelected = false;
+            return;
         }
 
+        AdminModeSelected = true;
+        _ = RunScanAsync();
+    }
+
+    public void BeginEnhancedScanIfRequested()
+    {
+        if (!_launch.EnhancedScanOnStartup)
+            return;
+
+        if (!EnhancedScanService.IsRunningAsAdmin())
+        {
+            MessageBox.Show(
+                "Enhanced scan requires administrator mode. Please choose Enhanced scan again.",
+                "VerifyTech Agent",
+                MessageBoxButton.OK,
+                MessageBoxImage.Warning);
+            CurrentPage = AppPage.Permission;
+            return;
+        }
+
+        AdminModeSelected = true;
+        CurrentPage = AppPage.Permission;
         _ = RunScanAsync();
     }
 
@@ -152,7 +184,7 @@ public partial class ShellViewModel : ObservableObject
         }
         catch (Exception ex)
         {
-            _logger.Error("Scan failed", ex);
+            _logger.Error($"Scan failed (api={_settings.ApiBaseUrl}, channel={_settings.BuildChannel})", ex);
             ShowError(MapScanError(ex));
             CurrentPage = AppPage.Permission;
         }
@@ -205,7 +237,7 @@ public partial class ShellViewModel : ObservableObject
         }
         catch (Exception ex)
         {
-            _logger.Error("Submit failed", ex);
+            _logger.Error($"Submit failed (api={_settings.ApiBaseUrl}, channel={_settings.BuildChannel})", ex);
             ShowError(MapScanError(ex));
             CurrentPage = AppPage.ResultPreview;
         }
@@ -265,11 +297,12 @@ public partial class ShellViewModel : ObservableObject
         MessageBox.Show(message, "VerifyTech Agent", MessageBoxButton.OK, MessageBoxImage.Warning);
     }
 
-    private static string MapScanError(Exception ex) => ex switch
+    private string MapScanError(Exception ex) => ex switch
     {
         InvalidOperationException ioe => ioe.Message,
-        HttpRequestException => "Unable to reach VerifyTech. Check your internet connection and try again.",
+        HttpRequestException hre =>
+            $"Unable to reach VerifyTech. Check your internet connection and try again.\n\nServer: {_settings.ApiBaseUrl}\n\nDetails: {hre.Message}",
         UnauthorizedAccessException => "Permission was denied for part of this scan. You can retry with a standard scan.",
-        _ => "Something went wrong during the scan. Please try again.",
+        _ => $"Something went wrong during the scan. Please try again.\n\nServer: {_settings.ApiBaseUrl}\n\nDetails: {ex.Message}",
     };
 }

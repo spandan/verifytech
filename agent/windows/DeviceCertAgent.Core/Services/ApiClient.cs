@@ -19,6 +19,8 @@ public sealed class ApiClient : IDisposable
     private readonly string _agentVersion;
     private readonly string _buildChannel;
 
+    public string BaseUrl { get; }
+
     public ApiClient(string baseUrl, string? agentVersion = null, string? buildChannel = null)
     {
         var normalized = baseUrl.TrimEnd('/');
@@ -27,6 +29,7 @@ public sealed class ApiClient : IDisposable
             && !normalized.Contains("127.0.0.1", StringComparison.OrdinalIgnoreCase))
             throw new InvalidOperationException("VerifyTech API must use HTTPS.");
 
+        BaseUrl = normalized;
         _agentVersion = agentVersion ?? AgentConfig.AgentVersion;
         _buildChannel = buildChannel ?? AgentConfig.BuildChannelProduction;
 
@@ -39,6 +42,9 @@ public sealed class ApiClient : IDisposable
         _http.DefaultRequestHeaders.Add("X-VerifyTech-Agent-Version", _agentVersion);
         _http.DefaultRequestHeaders.Add("X-VerifyTech-Build-Channel", _buildChannel);
     }
+
+    public string EndpointUrl(string relativePath) =>
+        $"{BaseUrl}/{relativePath.TrimStart('/')}";
 
     public async Task<ScanSessionStartResponse> StartScanSessionAsync(
         string agentVersion,

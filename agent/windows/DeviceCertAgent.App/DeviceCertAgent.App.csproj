@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
-    <TargetFramework>net8.0-windows</TargetFramework>
+    <TargetFramework>net8.0-windows10.0.17763.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <UseWPF>true</UseWPF>
@@ -13,11 +13,6 @@
     <Company>VerifyTech</Company>
     <Description>VerifyTech Windows device certification agent</Description>
     <SupportedOSPlatformVersion>10.0.17763.0</SupportedOSPlatformVersion>
-    <!-- Override via build: /p:VerifyTechBuildChannel=production -->
-    <VerifyTechBuildChannel Condition="'$(VerifyTechBuildChannel)' == ''">development</VerifyTechBuildChannel>
-    <DefineConstants Condition="'$(VerifyTechBuildChannel)' == 'production'">$(DefineConstants);PRODUCTION_BUILD</DefineConstants>
-    <DefineConstants Condition="'$(VerifyTechBuildChannel)' == 'staging'">$(DefineConstants);STAGING_BUILD</DefineConstants>
-    <DefineConstants Condition="'$(VerifyTechBuildChannel)' == 'development'">$(DefineConstants);DEV_BUILD</DefineConstants>
   </PropertyGroup>
 
   <ItemGroup>
@@ -28,7 +23,7 @@
     <ProjectReference Include="..\DeviceCertAgent.Core\DeviceCertAgent.Core.csproj" />
   </ItemGroup>
 
-  <ItemGroup>
+  <ItemGroup Condition="'$(VerifyTechBuildChannel)' == 'development'">
     <None Update="appsettings.local.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>

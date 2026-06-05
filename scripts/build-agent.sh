@@ -25,11 +25,13 @@ fi
 
 echo "Using dotnet: $(dotnet --version)"
 
+CHANNEL="${VERIFYTECH_BUILD_CHANNEL:-production}"
+
 echo "Restoring packages..."
-dotnet restore DeviceCertAgent.sln
+dotnet restore DeviceCertAgent.sln /p:VerifyTechBuildChannel="${CHANNEL}"
 
 echo "Running Core tests..."
-dotnet test DeviceCertAgent.Core/DeviceCertAgent.Core.csproj -c Release 2>/dev/null || dotnet test DeviceCertAgent.Tests/DeviceCertAgent.Tests.csproj -c Release
+dotnet test DeviceCertAgent.Core/DeviceCertAgent.Core.csproj -c Release /p:VerifyTechBuildChannel="${CHANNEL}" 2>/dev/null || dotnet test DeviceCertAgent.Tests/DeviceCertAgent.Tests.csproj -c Release /p:VerifyTechBuildChannel="${CHANNEL}"
 
 if [[ "$(uname -s)" != "MINGW"* && "$(uname -s)" != "MSYS"* && "$(uname -s)" != "CYGWIN"* && "$(uname -s)" != "Windows_NT" ]]; then
   echo ""
@@ -38,7 +40,6 @@ if [[ "$(uname -s)" != "MINGW"* && "$(uname -s)" != "MSYS"* && "$(uname -s)" != 
   exit 0
 fi
 
-CHANNEL="${VERIFYTECH_BUILD_CHANNEL:-production}"
 echo "Publishing WPF desktop app (win-x64, channel=${CHANNEL})..."
 dotnet publish DeviceCertAgent.App/DeviceCertAgent.App.csproj \
   -c Release \

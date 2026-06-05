@@ -1,3 +1,5 @@
+using System.ComponentModel;
+using System.Runtime.CompilerServices;
 using DeviceCertAgent.Core.Configuration;
 
 namespace DeviceCertAgent.Core.Models;
@@ -38,12 +40,39 @@ public sealed class CollectorResult<T>
         new() { Status = CollectorStatus.Failed, Message = message };
 }
 
-public sealed class ScanStepProgress
+public sealed class ScanStepProgress : INotifyPropertyChanged
 {
     public required string StepId { get; init; }
     public required string Title { get; init; }
-    public ScanStepStatus Status { get; set; } = ScanStepStatus.Pending;
-    public string? Detail { get; set; }
+
+    private ScanStepStatus _status = ScanStepStatus.Pending;
+    public ScanStepStatus Status
+    {
+        get => _status;
+        set
+        {
+            if (_status == value) return;
+            _status = value;
+            OnPropertyChanged();
+        }
+    }
+
+    private string? _detail;
+    public string? Detail
+    {
+        get => _detail;
+        set
+        {
+            if (_detail == value) return;
+            _detail = value;
+            OnPropertyChanged();
+        }
+    }
+
+    public event PropertyChangedEventHandler? PropertyChanged;
+
+    private void OnPropertyChanged([CallerMemberName] string? propertyName = null) =>
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
 }
 
 public sealed class ScanSession
@@ -65,6 +94,7 @@ public sealed class AppLaunchOptions
     public string? ApiUrlOverride { get; set; }
     public bool MockApi { get; set; }
     public bool Headless { get; set; }
+    public bool EnhancedScanOnStartup { get; set; }
 }
 
 public sealed class EndpointSettings
@@ -96,7 +126,12 @@ public sealed class ScanSummary
     public string Storage { get; set; } = "";
     public string Battery { get; set; } = "N/A";
     public string StorageHealth { get; set; } = "N/A";
+    public string Display { get; set; } = "N/A";
+    public string Graphics { get; set; } = "N/A";
+    public string Security { get; set; } = "N/A";
     public string CoreChecks { get; set; } = "";
     public double CompletenessPercent { get; set; }
     public string ScanType { get; set; } = "Standard";
+    public IReadOnlyList<string> Warnings { get; set; } = [];
+    public bool HasWarnings => Warnings.Count > 0;
 }

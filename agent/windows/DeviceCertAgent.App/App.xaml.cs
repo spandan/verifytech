@@ -10,10 +10,11 @@ public partial class App : Application
     {
         base.OnStartup(e);
 
-        var (settings, _) = new SecureEndpointResolver().Resolve(e.Args);
-        var shell = new ShellViewModel(settings, new());
+        var (settings, launch) = new SecureEndpointResolver().Resolve(e.Args);
+        var shell = new ShellViewModel(settings, launch);
         var window = new MainWindow { DataContext = shell };
         MainWindow = window;
+        window.Loaded += (_, _) => shell.BeginEnhancedScanIfRequested();
         window.Show();
     }
 }
