@@ -50,6 +50,8 @@
               <TextBlock Style="{StaticResource BodyText}" Text="• Shareable report link and certificate code"/>
               <TextBlock Style="{StaticResource BodyText}" Margin="0,8,0,0" Foreground="{StaticResource AccentBrush}"
                          Text="No personal files, photos, or browsing data are collected."/>
+              <TextBlock Style="{StaticResource BodyText}" Margin="0,12,0,0" TextWrapping="Wrap"
+                         Text="Requires .NET 8 Desktop Runtime (x64). If the app won't start, install from dotnet.microsoft.com/download/dotnet/8.0 or run Launch-VerifyTechAgent.cmd."/>
             </StackPanel>
           </Border>
           <Button Content="Start certification" Style="{StaticResource AccentButton}" Command="{Binding BeginCertificationCommand}" HorizontalAlignment="Left"/>
@@ -160,26 +162,108 @@
           </StackPanel>
 
           <StackPanel Visibility="{Binding CurrentStep, Converter={StaticResource FuncStepVis}, ConverterParameter=Speaker}">
+            <TextBlock Text="Speaker check" FontSize="16" FontWeight="SemiBold"
+                       Foreground="{StaticResource TextPrimaryBrush}" Margin="0,0,0,6"/>
             <TextBlock Style="{StaticResource BodyText}" TextWrapping="Wrap" Margin="0,0,0,12"
-                       Text="Stereo speaker test. Confirm each channel separately."/>
-            <Button Content="Play left channel" Command="{Binding PlaySpeakerLeftCommand}" Style="{StaticResource PrimaryButton}" Margin="0,0,0,8"/>
-            <Button Content="Left channel audible" Command="{Binding ConfirmSpeakerLeftCommand}" Style="{StaticResource SecondaryButton}" Margin="0,0,0,12"/>
-            <Button Content="Play right channel" Command="{Binding PlaySpeakerRightCommand}" Style="{StaticResource PrimaryButton}" Margin="0,0,0,8"/>
-            <StackPanel Orientation="Horizontal">
-              <Button Content="Right channel audible" Command="{Binding ConfirmSpeakerRightCommand}" Style="{StaticResource AccentButton}" Margin="0,0,8,0"/>
-              <Button Content="Speakers failed" Command="{Binding ConfirmSpeakerFailedCommand}" Style="{StaticResource SecondaryButton}"/>
-            </StackPanel>
+                       Text="We play a short tone in each channel. Use headphones on a laptop if speakers are hard to tell apart."/>
+
+            <Border Style="{StaticResource AudioStepCardBorder}">
+              <StackPanel>
+                <TextBlock Style="{StaticResource AudioStepLabel}" Text="STEP 1 OF 2"/>
+                <TextBlock Style="{StaticResource AudioStepTitle}" Text="Left channel"/>
+                <TextBlock Style="{StaticResource BodyText}" Margin="0,0,0,12"
+                           Text="Play the tone, then say whether you heard it clearly on the left."/>
+                <Button Content="▶  Play left tone" Command="{Binding PlaySpeakerLeftCommand}"
+                        Style="{StaticResource PrimaryButton}" HorizontalAlignment="Left" Margin="0,0,0,14"/>
+                <TextBlock Style="{StaticResource BodyText}" FontWeight="SemiBold"
+                           Foreground="{StaticResource TextPrimaryBrush}" Margin="0,0,0,8"
+                           Text="Did you hear the tone on the left?"/>
+                <StackPanel Orientation="Horizontal">
+                  <Button Content="Yes — left is clear" Command="{Binding AnswerLeftSpeakerYesCommand}"
+                          Style="{StaticResource AccentButton}" Margin="0,0,8,0"/>
+                  <Button Content="No — couldn't hear left" Command="{Binding AnswerLeftSpeakerNoCommand}"
+                          Style="{StaticResource SecondaryButton}"/>
+                </StackPanel>
+              </StackPanel>
+            </Border>
+
+            <Border Style="{StaticResource AudioStepCardBorder}" IsEnabled="{Binding SpeakerLeftStepComplete}">
+              <StackPanel>
+                <TextBlock Style="{StaticResource AudioStepLabel}" Text="STEP 2 OF 2"/>
+                <TextBlock Style="{StaticResource AudioStepTitle}" Text="Right channel"/>
+                <TextBlock Style="{StaticResource BodyText}" Margin="0,0,0,12"
+                           Text="Complete step 1 first, then play the right tone and confirm what you hear."/>
+                <Button Content="▶  Play right tone" Command="{Binding PlaySpeakerRightCommand}"
+                        Style="{StaticResource PrimaryButton}" HorizontalAlignment="Left" Margin="0,0,0,14"/>
+                <TextBlock Style="{StaticResource BodyText}" FontWeight="SemiBold"
+                           Foreground="{StaticResource TextPrimaryBrush}" Margin="0,0,0,8"
+                           Text="Did you hear the tone on the right?"/>
+                <StackPanel Orientation="Horizontal">
+                  <Button Content="Yes — right is clear" Command="{Binding AnswerRightSpeakerYesCommand}"
+                          Style="{StaticResource AccentButton}" Margin="0,0,8,0"/>
+                  <Button Content="No — couldn't hear right" Command="{Binding AnswerRightSpeakerNoCommand}"
+                          Style="{StaticResource SecondaryButton}"/>
+                </StackPanel>
+              </StackPanel>
+            </Border>
+
+            <Button Content="Speakers not working — skip to microphone" Command="{Binding SkipSpeakersCommand}"
+                    Style="{StaticResource SecondaryButton}" HorizontalAlignment="Left"/>
           </StackPanel>
 
           <StackPanel Visibility="{Binding CurrentStep, Converter={StaticResource FuncStepVis}, ConverterParameter=Microphone}">
+            <TextBlock Text="Microphone check" FontSize="16" FontWeight="SemiBold"
+                       Foreground="{StaticResource TextPrimaryBrush}" Margin="0,0,0,6"/>
             <TextBlock Style="{StaticResource BodyText}" TextWrapping="Wrap" Margin="0,0,0,12"
-                       Text="Audio is recorded locally for playback only and deleted immediately after testing. No audio is uploaded."/>
-            <Button Content="Record 4 second sample" Command="{Binding RecordMicrophoneSampleCommand}" Style="{StaticResource PrimaryButton}" Margin="0,0,0,8"/>
-            <Button Content="Play sample back" Command="{Binding PlayMicrophoneSampleCommand}" Style="{StaticResource SecondaryButton}" Margin="0,0,0,12"/>
-            <StackPanel Orientation="Horizontal">
-              <Button Content="Playback confirmed" Command="{Binding ConfirmMicrophonePassedCommand}" Style="{StaticResource AccentButton}" Margin="0,0,8,0"/>
-              <Button Content="Mic failed" Command="{Binding ConfirmMicrophoneFailedCommand}" Style="{StaticResource SecondaryButton}"/>
-            </StackPanel>
+                       Text="Your voice is recorded on this device only, played back once, then deleted. Nothing is uploaded."/>
+
+            <Border Style="{StaticResource AudioStepCardBorder}">
+              <StackPanel>
+                <TextBlock Style="{StaticResource AudioStepLabel}" Text="STEP 1 OF 3"/>
+                <TextBlock Style="{StaticResource AudioStepTitle}" Text="Record"/>
+                <TextBlock Style="{StaticResource BodyText}" Margin="0,0,0,12"
+                           Text="Speak normally for about 4 seconds after you press Record."/>
+                <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                  <Button Content="●  Record sample" Command="{Binding RecordMicrophoneSampleCommand}"
+                          Style="{StaticResource PrimaryButton}" Margin="0,0,12,0"/>
+                  <StackPanel VerticalAlignment="Center"
+                              Visibility="{Binding IsRecordingMic, Converter={StaticResource BoolVis}}">
+                    <ProgressBar IsIndeterminate="True" Width="120" Height="6" Margin="0,0,0,6"/>
+                    <TextBlock Style="{StaticResource BodyText}" Text="Recording…"/>
+                  </StackPanel>
+                </StackPanel>
+                <TextBlock Style="{StaticResource BodyText}"
+                           Visibility="{Binding MicSampleReady, Converter={StaticResource BoolVis}}"
+                           Foreground="{StaticResource SuccessBrush}"
+                           Text="✓ Sample recorded — continue to step 2."/>
+              </StackPanel>
+            </Border>
+
+            <Border Style="{StaticResource AudioStepCardBorder}" IsEnabled="{Binding MicSampleReady}">
+              <StackPanel>
+                <TextBlock Style="{StaticResource AudioStepLabel}" Text="STEP 2 OF 3"/>
+                <TextBlock Style="{StaticResource AudioStepTitle}" Text="Listen"/>
+                <TextBlock Style="{StaticResource BodyText}" Margin="0,0,0,12"
+                           Text="Play your recording back and listen with your speakers or headphones."/>
+                <Button Content="▶  Play my recording" Command="{Binding PlayMicrophoneSampleCommand}"
+                        Style="{StaticResource PrimaryButton}" HorizontalAlignment="Left"/>
+              </StackPanel>
+            </Border>
+
+            <Border Style="{StaticResource AudioStepCardBorder}" IsEnabled="{Binding MicSampleReady}">
+              <StackPanel>
+                <TextBlock Style="{StaticResource AudioStepLabel}" Text="STEP 3 OF 3"/>
+                <TextBlock Style="{StaticResource AudioStepTitle}" Text="Confirm"/>
+                <TextBlock Style="{StaticResource BodyText}" Margin="0,0,0,12"
+                           Text="Did the playback sound like your voice?"/>
+                <StackPanel Orientation="Horizontal">
+                  <Button Content="Yes — mic works" Command="{Binding ConfirmMicrophonePassedCommand}"
+                          Style="{StaticResource AccentButton}" Margin="0,0,8,0"/>
+                  <Button Content="No — mic doesn't work" Command="{Binding ConfirmMicrophoneFailedCommand}"
+                          Style="{StaticResource SecondaryButton}"/>
+                </StackPanel>
+              </StackPanel>
+            </Border>
           </StackPanel>
 
           <StackPanel Visibility="{Binding CurrentStep, Converter={StaticResource FuncStepVis}, ConverterParameter=Camera}">

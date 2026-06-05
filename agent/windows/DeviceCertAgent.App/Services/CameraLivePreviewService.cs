@@ -14,11 +14,12 @@ using Windows.Media.Capture.Frames;
 
 namespace DeviceCertAgent.App.Services;
 
-/// <summary>WinRT in-app camera preview — no photos/video uploaded.</summary>
+/// <summary>Camera preview — DirectShow first, WinRT fallback. No upload.</summary>
 public sealed class CameraLivePreviewService : IAsyncDisposable
 {
     private readonly AgentLogger _logger = new();
     private readonly object _sync = new();
+    private DirectShowCameraBackend? _directShow;
     private MediaCapture? _capture;
     private MediaFrameReader? _reader;
     private TypedEventHandler<MediaFrameReader, MediaFrameArrivedEventArgs>? _frameHandler;
@@ -30,7 +31,7 @@ public sealed class CameraLivePreviewService : IAsyncDisposable
     private long _lastFrameUiTick;
     private volatile bool _stopping;
 
-    public bool IsPreviewRunning => _reader is not null;
+    public bool IsPreviewRunning => _directShow is not null || _reader is not null;
     public string? CameraName => _deviceName;
     public string? Resolution => _resolution;
     public int? FrameRateFps => _fps;
@@ -43,6 +44,22 @@ public sealed class CameraLivePreviewService : IAsyncDisposable
         {
             await StopPreviewAsync();
             _frameCallback = frameCallback;
+
+            _directShow = new DirectShowCameraBackend();
+            var (dsOk, dsErr) = await _directShow.StartAsync(frameCallback);
+            if (dsOk)
+            {
+                _deviceName = _directShow.DeviceName;
+                _deviceId = _directShow.DeviceId;
+                _resolution = _directShow.Resolution;
+                _fps = _directShow.FrameRateFps;
+                return (true, null);
+            }
+
+            _logger.Warn($"DirectShow camera failed ({dsErr}); trying WinRT.");
+            _directShow.Dispose();
+            _directShow = null;
+
             return await TryStartWinRtAsync(windowHandle);
         }
         catch (UnauthorizedAccessException)
@@ -69,7 +86,7 @@ public sealed class CameraLivePreviewService : IAsyncDisposable
         {
             try
             {
-                await DisposeCaptureSessionAsync();
+                await DisposeWinRtSessionAsync();
                 _deviceId = device.Id;
                 _deviceName = device.Name;
 
@@ -87,9 +104,9 @@ public sealed class CameraLivePreviewService : IAsyncDisposable
                 });
 
                 var source = _capture.FrameSources.Values
-                    .FirstOrDefault(s => s.Info.MediaStreamType == MediaStreamType.VideoRecord)
+                    .FirstOrDefault(s => s.Info.MediaStreamType == MediaStreamType.VideoPreview)
                     ?? _capture.FrameSources.Values
-                        .FirstOrDefault(s => s.Info.MediaStreamType == MediaStreamType.VideoPreview)
+                        .FirstOrDefault(s => s.Info.MediaStreamType == MediaStreamType.VideoRecord)
                     ?? _capture.FrameSources.Values.FirstOrDefault();
 
                 if (source is null)
@@ -97,7 +114,7 @@ public sealed class CameraLivePreviewService : IAsyncDisposable
 
                 var format = source.SupportedFormats
                     .Where(f => f.VideoFormat is not null)
-                    .OrderByDescending(f => f.VideoFormat!.Width * f.VideoFormat!.Height)
+                    .OrderBy(f => f.VideoFormat!.Width * f.VideoFormat!.Height)
                     .FirstOrDefault()
                     ?? source.CurrentFormat;
 
@@ -128,14 +145,14 @@ public sealed class CameraLivePreviewService : IAsyncDisposable
             catch (UnauthorizedAccessException ex)
             {
                 lastError = ex;
-                await DisposeCaptureSessionAsync();
+                await DisposeWinRtSessionAsync();
                 return (false, CameraAccessHelper.AccessDeniedCode);
             }
             catch (Exception ex)
             {
                 _logger.Warn($"WinRT camera init failed for {device.Name}: {ex.Message}");
                 lastError = ex;
-                await DisposeCaptureSessionAsync();
+                await DisposeWinRtSessionAsync();
             }
         }
 
@@ -150,11 +167,23 @@ public sealed class CameraLivePreviewService : IAsyncDisposable
         try
         {
             using var mediaFrame = sender.TryAcquireLatestFrame();
-            var softwareBitmap = mediaFrame?.VideoMediaFrame?.SoftwareBitmap;
-            if (softwareBitmap is null)
+            var video = mediaFrame?.VideoMediaFrame;
+            if (video is null)
                 return;
 
-            var image = ConvertSoftwareBitmap(softwareBitmap);
+            BitmapSource? image = null;
+            if (video.SoftwareBitmap is { } softwareBitmap)
+            {
+                image = ConvertSoftwareBitmap(softwareBitmap);
+            }
+            else if (video.Direct3DSurface is { } surface)
+            {
+                using var copied = SoftwareBitmap.CreateCopyFromSurfaceAsync(
+                        surface, BitmapAlphaMode.Premultiplied)
+                    .AsTask().GetAwaiter().GetResult();
+                image = ConvertSoftwareBitmap(copied);
+            }
+
             if (image is null)
                 return;
 
@@ -167,7 +196,7 @@ public sealed class CameraLivePreviewService : IAsyncDisposable
         }
         catch (Exception ex)
         {
-            _logger.Warn($"Camera frame dropped: {ex.Message}");
+            _logger.Warn($"WinRT camera frame dropped: {ex.Message}");
         }
     }
 
@@ -241,13 +270,18 @@ public sealed class CameraLivePreviewService : IAsyncDisposable
             _stopping = true;
 
         _frameCallback = null;
-        await DisposeCaptureSessionAsync();
+
+        try { _directShow?.Stop(); } catch { /* ignore */ }
+        _directShow?.Dispose();
+        _directShow = null;
+
+        await DisposeWinRtSessionAsync();
 
         lock (_sync)
             _stopping = false;
     }
 
-    private async Task DisposeCaptureSessionAsync()
+    private async Task DisposeWinRtSessionAsync()
     {
         if (_reader is not null && _frameHandler is not null)
         {

@@ -38,6 +38,8 @@ public partial class FunctionalTestsViewModel : ObservableObject, IAsyncDisposab
     [ObservableProperty] private bool _displayUniformityOk = true;
     [ObservableProperty] private bool _leftSpeakerConfirmed;
     [ObservableProperty] private bool _rightSpeakerConfirmed;
+    [ObservableProperty] private bool _speakerLeftStepComplete;
+    [ObservableProperty] private bool _micSampleReady;
     [ObservableProperty] private bool _microphonePlaybackConfirmed;
     [ObservableProperty] private bool _isRecordingMic;
     [ObservableProperty] private bool _cameraPreviewActive;
@@ -153,46 +155,88 @@ public partial class FunctionalTestsViewModel : ObservableObject, IAsyncDisposab
         Results.Display.UniformityTestPassed = DisplayUniformityOk;
         Results.Display.Grade = DisplayDeadPixelsOk && DisplayBrightnessOk && DisplayColorOk ? "Pass" : "Review";
         Results.DisplayOutputTest = _displayHotplug.BuildResult();
+        ResetSpeakerUi();
         CurrentStep = FunctionalTestStep.Speaker;
-        StatusMessage = "Play the left-channel tone and confirm you hear it.";
+        StatusMessage = "Step 1 of 2: test the left speaker channel.";
+    }
+
+    private void ResetSpeakerUi()
+    {
+        LeftSpeakerConfirmed = false;
+        RightSpeakerConfirmed = false;
+        SpeakerLeftStepComplete = false;
+        _speakerLeftDone = false;
+    }
+
+    private void ResetMicrophoneUi()
+    {
+        MicSampleReady = false;
+        _micRecorded = false;
+        MicrophonePlaybackConfirmed = false;
     }
 
     [RelayCommand]
     private void PlaySpeakerLeft()
     {
         _speaker.PlayLeftChannel();
-        StatusMessage = "Left channel playing — confirm you hear sound on the left.";
+        StatusMessage = "Left tone playing now — listen on the left side, then choose Yes or No below.";
     }
 
     [RelayCommand]
-    private void ConfirmSpeakerLeft()
+    private void AnswerLeftSpeakerYes()
     {
         _speakerLeftDone = true;
         LeftSpeakerConfirmed = true;
-        StatusMessage = "Play the right-channel tone and confirm you hear it.";
+        SpeakerLeftStepComplete = true;
+        StatusMessage = "Step 2 of 2: test the right speaker channel.";
+    }
+
+    [RelayCommand]
+    private void AnswerLeftSpeakerNo()
+    {
+        _speakerLeftDone = true;
+        LeftSpeakerConfirmed = false;
+        SpeakerLeftStepComplete = true;
+        StatusMessage = "Left channel not confirmed. Step 2 of 2: test the right channel.";
     }
 
     [RelayCommand]
     private void PlaySpeakerRight()
     {
         _speaker.PlayRightChannel();
-        StatusMessage = "Right channel playing — confirm you hear sound on the right.";
+        StatusMessage = "Right tone playing now — listen on the right side, then choose Yes or No below.";
     }
 
     [RelayCommand]
-    private void ConfirmSpeakerRight()
+    private void AnswerRightSpeakerYes()
     {
         RightSpeakerConfirmed = true;
-        FinalizeSpeaker(passed: true);
-        CurrentStep = FunctionalTestStep.Microphone;
-        StatusMessage = "Record a short sample (3–5 seconds). Audio stays on this device.";
+        CompleteSpeakerTest();
     }
 
     [RelayCommand]
-    private void ConfirmSpeakerFailed()
+    private void AnswerRightSpeakerNo()
     {
+        RightSpeakerConfirmed = false;
+        CompleteSpeakerTest();
+    }
+
+    [RelayCommand]
+    private void SkipSpeakers()
+    {
+        _speaker.Stop();
         FinalizeSpeaker(passed: false);
+        ResetMicrophoneUi();
         CurrentStep = FunctionalTestStep.Microphone;
+        StatusMessage = "Step 1 of 3: record a short microphone sample.";
+    }
+
+    private void CompleteSpeakerTest()
+    {
+        FinalizeSpeaker(LeftSpeakerConfirmed && RightSpeakerConfirmed);
+        ResetMicrophoneUi();
+        CurrentStep = FunctionalTestStep.Microphone;
+        StatusMessage = "Step 1 of 3: record a short microphone sample.";
     }
 
     private void FinalizeSpeaker(bool passed)
@@ -212,21 +256,25 @@ public partial class FunctionalTestsViewModel : ObservableObject, IAsyncDisposab
         FunctionalValidationMapper.ApplyLegacyFields(Results);
     }
 
-    [RelayCommand]
+    [RelayCommand(CanExecute = nameof(CanRecordMicrophone))]
     private async Task RecordMicrophoneSample()
     {
         IsRecordingMic = true;
-        StatusMessage = "Recording… speak into the microphone.";
+        MicSampleReady = false;
+        StatusMessage = "Recording… speak clearly into the microphone.";
         try
         {
             Results.MicrophoneTest = await _mic.RecordAsync(4);
             _micRecorded = true;
-            StatusMessage = $"Recorded {Results.MicrophoneTest.RecordedSeconds:0}s. Play back locally, then confirm.";
+            MicSampleReady = true;
+            StatusMessage = "Step 2 of 3: play back your recording and listen.";
         }
         catch (Exception ex)
         {
             Results.MicrophoneTest = ComponentValidationStatus.Failed(true, ex.Message) as MicrophoneTestResult
                 ?? new MicrophoneTestResult { Present = true, Tested = true, Result = ValidationResults.Failed, Reason = ex.Message };
+            MicSampleReady = false;
+            StatusMessage = "Recording failed. Try again or mark the microphone as not working.";
         }
         finally
         {
@@ -234,14 +282,35 @@ public partial class FunctionalTestsViewModel : ObservableObject, IAsyncDisposab
         }
     }
 
-    [RelayCommand]
+    [RelayCommand(CanExecute = nameof(CanPlayMicrophoneSample))]
     private void PlayMicrophoneSample()
     {
         _mic.PlayLastSample();
-        StatusMessage = "Playing local sample — confirm you hear your recording.";
+        StatusMessage = "Step 3 of 3: did the playback sound like your voice?";
     }
 
-    [RelayCommand]
+    private bool CanRecordMicrophone() => !IsRecordingMic;
+
+    private bool CanPlayMicrophoneSample() => MicSampleReady && !IsRecordingMic;
+
+    private bool CanConfirmMicrophone() => MicSampleReady && !IsRecordingMic;
+
+    partial void OnIsRecordingMicChanged(bool value)
+    {
+        RecordMicrophoneSampleCommand.NotifyCanExecuteChanged();
+        PlayMicrophoneSampleCommand.NotifyCanExecuteChanged();
+        ConfirmMicrophonePassedCommand.NotifyCanExecuteChanged();
+        ConfirmMicrophoneFailedCommand.NotifyCanExecuteChanged();
+    }
+
+    partial void OnMicSampleReadyChanged(bool value)
+    {
+        PlayMicrophoneSampleCommand.NotifyCanExecuteChanged();
+        ConfirmMicrophonePassedCommand.NotifyCanExecuteChanged();
+        ConfirmMicrophoneFailedCommand.NotifyCanExecuteChanged();
+    }
+
+    [RelayCommand(CanExecute = nameof(CanConfirmMicrophone))]
     private void ConfirmMicrophonePassed()
     {
         var t = Results.MicrophoneTest;
@@ -257,7 +326,7 @@ public partial class FunctionalTestsViewModel : ObservableObject, IAsyncDisposab
         _ = StartCameraStepAsync();
     }
 
-    [RelayCommand]
+    [RelayCommand(CanExecute = nameof(CanConfirmMicrophone))]
     private void ConfirmMicrophoneFailed()
     {
         Results.MicrophoneTest.Present = true;

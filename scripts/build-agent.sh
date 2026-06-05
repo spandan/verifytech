@@ -44,10 +44,8 @@ echo "Publishing WPF desktop app (win-x64, channel=${CHANNEL})..."
 dotnet publish DeviceCertAgent.App/DeviceCertAgent.App.csproj \
   -c Release \
   -r win-x64 \
-  --self-contained true \
+  --self-contained false \
   /p:PublishSingleFile=true \
-  /p:IncludeNativeLibrariesForSelfExtract=true \
-  /p:EnableCompressionInSingleFile=true \
   /p:VerifyTechBuildChannel="${CHANNEL}" \
   -o publish
 

@@ -87,14 +87,21 @@ if (Test-Path $publishDir) {
 & $DotNet publish DeviceCertAgent.App/DeviceCertAgent.App.csproj `
     -c Release `
     -r win-x64 `
-    --self-contained true `
+    --self-contained false `
     /p:PublishSingleFile=true `
-    /p:IncludeNativeLibrariesForSelfExtract=true `
-    /p:EnableCompressionInSingleFile=true `
     /p:VerifyTechBuildChannel="$Channel" `
     -o publish
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
+Get-ChildItem (Join-Path $publishDir '*.pdb') -ErrorAction SilentlyContinue | Remove-Item -Force
+
+$exePath = Join-Path $publishDir 'DeviceCertAgent.exe'
+$exeMb = if (Test-Path $exePath) { [math]::Round((Get-Item $exePath).Length / 1MB, 2) } else { 0 }
+
 Write-Host ''
-Write-Host 'Built: agent/windows/publish/DeviceCertAgent.exe'
-Write-Host 'Copy to backend static path or distribute to users.'
+Write-Host "Built: agent/windows/publish/DeviceCertAgent.exe ($exeMb MB, framework-dependent)"
+Write-Host 'Requires .NET 8 Desktop Runtime: https://dotnet.microsoft.com/download/dotnet/8.0'
+Write-Host 'Use Launch-VerifyTechAgent.cmd to check runtime before starting.'
+if ($exeMb -gt 50) {
+    Write-Host "Warning: executable is above 50 MB ($exeMb MB)." -ForegroundColor Yellow
+}
