@@ -133,6 +133,9 @@ class Database:
         row = self._first("device_reports", id=report_id)
         return DeviceReport.from_row(row) if row else None
 
+    def update_device_report(self, report_id: str, updates: dict[str, Any]) -> None:
+        self.client.table("device_reports").update(updates).eq("id", report_id).execute()
+
     # ── Certificates ─────────────────────────────────────────────────────────
 
     def create_certificate(self, payload: dict[str, Any]) -> Certificate:

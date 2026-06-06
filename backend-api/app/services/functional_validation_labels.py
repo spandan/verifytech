@@ -20,6 +20,8 @@ def validation_label(test: Any, *, verified_detail: str) -> str:
         return LABEL_FAILED
     if result == "inconclusive":
         return LABEL_INCONCLUSIVE
+    if test.get("playback_confirmed") and test.get("tested"):
+        return LABEL_VERIFIED
     if test.get("present") and not test.get("tested"):
         return LABEL_NOT_TESTED
     return LABEL_NOT_TESTED

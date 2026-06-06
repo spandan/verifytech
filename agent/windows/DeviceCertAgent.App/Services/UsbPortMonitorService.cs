@@ -18,8 +18,7 @@ public sealed class UsbPortMonitorService : IDisposable
     {
         if (_started) return;
         _started = true;
-        InsertDetected = false;
-        RemoveDetected = false;
+        Reset();
 
         try
         {
@@ -64,6 +63,13 @@ public sealed class UsbPortMonitorService : IDisposable
         {
             return "USB";
         }
+    }
+
+    public void Reset()
+    {
+        InsertDetected = false;
+        RemoveDetected = false;
+        LastDeviceClass = null;
     }
 
     public UsbTestResult BuildResult(bool userSkipped)

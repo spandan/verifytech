@@ -6,11 +6,14 @@ from typing import Any
 
 from app.services.plain_language_report import (
     humanize_field_name,
+    parse_check_item,
     plain_battery,
     plain_encryption,
     plain_functional_label,
     plain_keyboard,
+    plain_network,
     plain_performance,
+    plain_ports,
     plain_screen,
     plain_secure_boot,
     plain_security_headline,
@@ -18,6 +21,7 @@ from app.services.plain_language_report import (
     plain_storage_summary,
     plain_touchpad,
     plain_tpm,
+    plain_windows,
     resale_readiness,
     sanitize_warning,
     tri_state_detail,
@@ -49,6 +53,8 @@ class InspectionReportService:
         memory = assessment.get("memory") or {}
         display_a = assessment.get("display") or {}
         ports = assessment.get("ports") or {}
+        network = assessment.get("network") or {}
+        windows = assessment.get("windows") or {}
 
         device_name = f"{t1.get('manufacturer', '')} {t1.get('model', '')}".strip() or "This device"
         ram_gb = t1.get("ram_total_gb")
@@ -68,6 +74,7 @@ class InspectionReportService:
             "keyboard": plain_keyboard(functional.get("keyboard")),
             "touchpad": plain_touchpad(functional.get("touchpad")),
             "usb_port": plain_functional_label(functional.get("usb_test")),
+            "audio_jack": plain_functional_label(functional.get("audio_jack_test")),
             "screen": plain_screen(functional.get("display") or {}, display_a),
         }
 
@@ -79,7 +86,21 @@ class InspectionReportService:
         }
 
         warnings_raw = _collect_warnings(summary_text.get("warnings") or [], storage, battery, functional)
-        warnings_plain = [sanitize_warning(w) for w in warnings_raw if w]
+        warnings_plain = [
+            sanitize_warning(w) if isinstance(w, str) else w
+            for w in warnings_raw
+            if w
+        ]
+
+        battery_text = plain_battery(
+            battery.get("condition"),
+            battery.get("wear_percent"),
+            battery.get("life_recommendation"),
+        )
+        storage_text = plain_storage_summary(storage)
+        performance_text = plain_performance(benchmark.get("performance_rating"))
+        memory_text = _cv(memory.get("health_summary")) or "Checked during scan"
+        thermals_text = _plain_thermals(thermals)
 
         layer1 = {
             "certification_grade": grade_value,
@@ -87,18 +108,35 @@ class InspectionReportService:
             "device_name": device_name,
             "specs_line": specs_line,
             "display_resolution": (t2.get("display") or {}).get("resolution"),
-            "battery": plain_battery(
-                battery.get("condition"),
-                battery.get("wear_percent"),
-                battery.get("life_recommendation"),
-            ),
-            "storage": plain_storage_summary(storage),
-            "performance": plain_performance(benchmark.get("performance_rating")),
-            "memory": _cv(memory.get("health_summary")) or "Checked during scan",
-            "thermals": _plain_thermals(thermals),
+            "battery": battery_text,
+            "storage": storage_text,
+            "performance": performance_text,
+            "memory": memory_text,
+            "thermals": thermals_text,
             "screen": functional_summary["screen"],
             "functional": functional_summary,
             "security": security_summary,
+            "network": plain_network(network),
+            "windows": plain_windows(windows),
+            "ports": plain_ports(ports),
+            "check_items": [
+                parse_check_item("Battery", battery_text),
+                parse_check_item("Storage", storage_text),
+                parse_check_item("Performance", performance_text),
+                parse_check_item("Screen", functional_summary["screen"]),
+                parse_check_item("Memory", memory_text),
+                parse_check_item("Cooling", thermals_text),
+            ],
+            "functional_checks": [
+                parse_check_item(
+                    {"camera": "Camera", "microphone": "Microphone", "speaker": "Speakers",
+                     "keyboard": "Keyboard", "touchpad": "Touchpad", "usb_port": "USB port",
+                     "audio_jack": "Headset jack",
+                     "screen": "Screen"}.get(k, k.replace("_", " ").title()),
+                    v,
+                )
+                for k, v in functional_summary.items()
+            ],
             "resale_readiness": resale_readiness(
                 str(grade_value),
                 summary_text.get("refurbisher_notes") or "",
@@ -113,6 +151,19 @@ class InspectionReportService:
             "security": _advanced_security(security),
             "performance": _advanced_performance(benchmark, thermals, memory),
             "functional": _advanced_functional(functional, ports),
+            "network": _field_rows(network, [
+                "wifi_standard",
+                "wifi_generation",
+                "bluetooth_version",
+                "link_speed_summary",
+                "capability_summary",
+            ]),
+            "windows": _field_rows(windows, [
+                "edition",
+                "build",
+                "readiness_score",
+            ]),
+            "ports": _advanced_ports(ports),
             "collection_metadata": _advanced_metadata(scan_data, assessment),
             "evidence": [
                 {
@@ -304,12 +355,31 @@ def _advanced_functional(functional: dict[str, Any], ports: dict[str, Any]) -> d
         "microphone_test": functional.get("microphone_test"),
         "speaker_test": functional.get("speaker_test"),
         "usb_test": functional.get("usb_test"),
-        "display_output_test": functional.get("display_output_test"),
         "audio_jack_test": functional.get("audio_jack_test"),
         "keyboard": functional.get("keyboard"),
         "touchpad": functional.get("touchpad"),
         "display_checks": functional.get("display"),
         "port_inventory": ports.get("port_certification_status") or {},
+    }
+
+
+def _advanced_ports(ports: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "inventory": _field_rows(ports, [
+            "usb_a_count",
+            "usb_c_count",
+            "hdmi_count",
+            "display_port_count",
+            "thunderbolt_count",
+        ]),
+        "features": {
+            "thunderbolt": tri_state_detail(ports.get("thunderbolt")),
+            "ethernet": tri_state_detail(ports.get("ethernet")),
+            "audio_jack": tri_state_detail(ports.get("audio_jack")),
+            "sd_card_reader": tri_state_detail(ports.get("sd_card_reader")),
+        },
+        "certification_status": ports.get("port_certification_status") or {},
+        "notes": ports.get("inventory_notes") or [],
     }
 
 

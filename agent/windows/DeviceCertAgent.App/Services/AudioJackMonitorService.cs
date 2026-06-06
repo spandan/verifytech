@@ -67,6 +67,15 @@ public sealed class AudioJackMonitorService : IMMNotificationClient, IDisposable
                 Reason = _insertDetected ? "headset_inserted" : "headset_removed",
             };
 
+        if (TryGetEndpointChange(out var endpointReason))
+            return new AudioJackTestResult
+            {
+                Present = true,
+                Tested = true,
+                Result = ValidationResults.Passed,
+                Reason = endpointReason,
+            };
+
         return new AudioJackTestResult
         {
             Present = true,
@@ -74,6 +83,38 @@ public sealed class AudioJackMonitorService : IMMNotificationClient, IDisposable
             Result = ValidationResults.PresentNotTested,
             Reason = "no_headset_event_during_test",
         };
+    }
+
+    private bool TryGetEndpointChange(out string reason)
+    {
+        reason = "";
+        if (_initialCaptureId is null && _initialRenderId is null)
+            return false;
+
+        try
+        {
+            using var enumerator = new MMDeviceEnumerator();
+            var captureId = enumerator.GetDefaultAudioEndpoint(DataFlow.Capture, Role.Multimedia).ID;
+            var renderId = enumerator.GetDefaultAudioEndpoint(DataFlow.Render, Role.Multimedia).ID;
+
+            if (_initialCaptureId is not null && captureId != _initialCaptureId)
+            {
+                reason = "alternate_capture_endpoint";
+                return true;
+            }
+
+            if (_initialRenderId is not null && renderId != _initialRenderId)
+            {
+                reason = "alternate_render_endpoint";
+                return true;
+            }
+        }
+        catch
+        {
+            // unsupported
+        }
+
+        return false;
     }
 
     public void Dispose()

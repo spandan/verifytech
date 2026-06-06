@@ -169,8 +169,9 @@ export default function DownloadPage() {
                   </button>
                 </div>
                 <p className="text-secondary">
-                  In the agent, choose <strong>Enter Pairing Code</strong> and paste the code if the browser did not
-                  open the app automatically.
+                  The agent opens automatically when deep linking works. If it does not, open Certronx Agent and choose{" "}
+                  <strong>I have a code from certronx.com</strong>, then paste the code above. Connecting is required to
+                  save the certificate to your account.
                 </p>
               </div>
             )}

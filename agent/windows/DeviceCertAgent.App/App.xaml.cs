@@ -21,18 +21,45 @@ public partial class App : Application
 
         if (!SingleInstanceService.TryAcquire(e.Args))
         {
+            MessageBox.Show(
+                "Certronx Agent is already running.\n\nCheck your taskbar or press Alt+Tab to find the open window.",
+                AppBranding.AppName,
+                MessageBoxButton.OK,
+                MessageBoxImage.Information);
             Shutdown();
             return;
         }
 
         var (settings, launch) = new SecureEndpointResolver().Resolve(e.Args);
+        ProtocolRegistrationService.EnsureRegistered();
         var shell = new ShellViewModel(settings, launch);
-        var window = new MainWindow { DataContext = shell };
+        Window window;
+        try
+        {
+            window = new MainWindow { DataContext = shell };
+        }
+        catch (Exception ex)
+        {
+            var detail = ex.Message;
+            if (ex is System.Windows.Markup.XamlParseException xpe)
+                detail = $"{xpe.Message} (line {xpe.LineNumber}, pos {xpe.LinePosition})";
+            _logger.Error($"Failed to load agent window: {detail}", ex);
+            MessageBox.Show(
+                "Certronx Agent could not open its window.\n\n" +
+                "Try closing any running copy from Task Manager, then run Launch-CertronxAgent.cmd again.\n\n" +
+                $"Details: {detail}",
+                AppBranding.AppName,
+                MessageBoxButton.OK,
+                MessageBoxImage.Error);
+            Shutdown();
+            return;
+        }
+
         MainWindow = window;
         window.Loaded += (_, _) =>
         {
+            shell.InitializeLaunchFlow();
             shell.BeginEnhancedScanIfRequested();
-            shell.BeginPairingIfRequested();
         };
         window.Show();
     }
@@ -41,9 +68,9 @@ public partial class App : Application
     {
         _logger.Error("Unhandled UI exception", e.Exception);
         MessageBox.Show(
-            "Something unexpected happened, but VerifyTech Agent will keep running.\n\n" +
+            "Something unexpected happened, but Certronx Agent will keep running.\n\n" +
             "If you were testing the camera, tap Retry camera or mark the test as failed.",
-            "VerifyTech Agent",
+            AppBranding.AppName,
             MessageBoxButton.OK,
             MessageBoxImage.Warning);
         e.Handled = true;

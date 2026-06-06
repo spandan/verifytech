@@ -18,6 +18,70 @@ agent/windows/
 
 Production builds use this endpoint automatically. Endpoint overrides are disabled unless built for development/QA.
 
+## Build & run (Windows)
+
+The published agent is **framework-dependent** (~25 MB exe). It does **not** bundle .NET — users need the [.NET 8 Desktop Runtime (x64)](https://dotnet.microsoft.com/download/dotnet/8.0).
+
+### Build (from repo root)
+
+```cmd
+.\scripts\build-agent.cmd -Channel production
+```
+
+Other channels:
+
+```cmd
+.\scripts\build-agent.cmd -Channel staging
+.\scripts\build-agent.cmd -Channel development
+```
+
+PowerShell equivalent:
+
+```powershell
+.\scripts\build-agent.ps1 -Channel production
+```
+
+Output folder:
+
+```
+agent\windows\publish\
+├── DeviceCertAgent.exe          # main app (~25 MB)
+├── Launch-VerifyTechAgent.cmd   # checks runtime, then starts the app
+└── REQUIREMENTS.txt             # runtime install notes
+```
+
+Close any running `DeviceCertAgent.exe` before rebuilding.
+
+### Run locally after build
+
+**Recommended** — checks for .NET 8 Desktop Runtime and opens the download page if missing:
+
+```cmd
+agent\windows\publish\Launch-VerifyTechAgent.cmd
+```
+
+Or run the exe directly (Windows shows its own “.NET required” dialog if runtime is missing):
+
+```cmd
+agent\windows\publish\DeviceCertAgent.exe
+```
+
+Enhanced scan (admin relaunch):
+
+```cmd
+agent\windows\publish\DeviceCertAgent.exe --enhanced-scan
+```
+
+Mock API (offline UI):
+
+```cmd
+agent\windows\publish\DeviceCertAgent.exe --mock-api
+```
+
+### Distribute to users
+
+Ship the whole `publish` folder (or at minimum `DeviceCertAgent.exe` + `Launch-VerifyTechAgent.cmd` + `REQUIREMENTS.txt`).
+
 ## Build channels
 
 | Channel | Command | Endpoint override |
@@ -26,7 +90,11 @@ Production builds use this endpoint automatically. Endpoint overrides are disabl
 | **staging** | `VERIFYTECH_BUILD_CHANNEL=staging ./scripts/build-agent.sh` | Same as production |
 | **development** | Default on Windows without channel | `appsettings.local.json`, `VERIFYTECH_API_BASE_URL`, `--api-url` |
 
-WPF must be built on **Windows** with .NET 8 SDK.
+WPF must be built on **Windows** with .NET 8 **SDK** (not just the runtime).
+
+```cmd
+.\scripts\build-agent.cmd -Channel production
+```
 
 ```bash
 VERIFYTECH_BUILD_CHANNEL=production ./scripts/build-agent.sh
@@ -50,7 +118,7 @@ Or set:
 set VERIFYTECH_API_BASE_URL=http://localhost:8000
 ```
 
-Mock offline UI:
+Or run from `agent\windows\publish\`:
 
 ```cmd
 DeviceCertAgent.exe --mock-api

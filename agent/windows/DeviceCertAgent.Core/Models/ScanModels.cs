@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using DeviceCertAgent.Core.Configuration;
+using DeviceCertAgent.Core.Models.V2;
 
 namespace DeviceCertAgent.Core.Models;
 
@@ -86,9 +87,16 @@ public sealed class ScanSession
     public List<ScanStepProgress> Steps { get; set; } = [];
 }
 
+public enum AgentLaunchMode
+{
+    Standalone,
+    Paired,
+}
+
 public sealed class AppLaunchOptions
 {
     public string Mode { get; set; } = "certify";
+    public AgentLaunchMode LaunchMode { get; set; } = AgentLaunchMode.Standalone;
     public string? CertificateCode { get; set; }
     public string? IntakeId { get; set; }
     public string? ApiUrlOverride { get; set; }
@@ -135,4 +143,5 @@ public sealed class ScanSummary
     public string ScanType { get; set; } = "Standard";
     public IReadOnlyList<string> Warnings { get; set; } = [];
     public bool HasWarnings => Warnings.Count > 0;
+    public List<ReportCheckItem> HealthChecks { get; set; } = [];
 }

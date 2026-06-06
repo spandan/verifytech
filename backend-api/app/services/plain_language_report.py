@@ -24,6 +24,44 @@ def _cv(field: Any) -> Any:
     return field
 
 
+def parse_check_item(label: str, value: str | None) -> dict[str, str | None]:
+    """Split a buyer-facing line into label + headline + optional detail for UI hierarchy."""
+    raw = (value or "").strip()
+    if not raw or raw.lower() in ("not available", "not tested", "not measured", "not checked"):
+        return {
+            "label": label,
+            "headline": "Not checked",
+            "detail": None,
+            "tone": "muted",
+        }
+
+    parts = re.split(r"\s*[—–-]\s*", raw, maxsplit=1)
+    headline = parts[0].strip()
+    detail = parts[1].strip() if len(parts) > 1 else None
+    tone = _check_tone(headline)
+    return {
+        "label": label,
+        "headline": headline,
+        "detail": detail,
+        "tone": tone,
+    }
+
+
+def _check_tone(headline: str) -> str:
+    h = headline.lower()
+    if any(w in h for w in ("verified", "enabled", "healthy", "excellent", "checked")):
+        return "good"
+    if any(w in h for w in ("failed", "poor", "disabled", "replacement", "problem", "issues")):
+        return "bad"
+    if any(w in h for w in ("not tested", "not verified", "not detected", "unclear", "not checked")):
+        return "muted"
+    if any(w in h for w in ("fair", "caution", "monitor", "some wear")):
+        return "warn"
+    if any(w in h for w in ("good", "normal", "adequate", "suitable")):
+        return "good"
+    return "neutral"
+
+
 def plain_functional_label(test: Any) -> str:
     if not isinstance(test, dict):
         return LABEL_NOT_TESTED
@@ -34,6 +72,8 @@ def plain_functional_label(test: Any) -> str:
         return LABEL_FAILED
     if result == "inconclusive":
         return LABEL_INCONCLUSIVE
+    if test.get("playback_confirmed") and test.get("tested"):
+        return LABEL_VERIFIED
     if test.get("present") and not test.get("tested"):
         return LABEL_NOT_TESTED
     return LABEL_NOT_TESTED
@@ -198,6 +238,78 @@ def plain_screen(display_fn: dict[str, Any], display_assessment: dict[str, Any])
     return "Not fully tested"
 
 
+def plain_network(network: dict[str, Any]) -> str:
+    if not network:
+        return "Checked during scan"
+    cap = _cv(network.get("capability_summary"))
+    if cap and isinstance(cap, str) and not _TECHNICAL_PATTERN.search(cap):
+        return cap
+    parts = []
+    wifi = _cv(network.get("wifi_generation")) or _cv(network.get("wifi_standard"))
+    if wifi:
+        parts.append(f"Wi‑Fi {wifi}")
+    bt = _cv(network.get("bluetooth_version"))
+    if bt:
+        parts.append(f"Bluetooth {bt}")
+    link = _cv(network.get("link_speed_summary"))
+    if link and not _TECHNICAL_PATTERN.search(str(link)):
+        parts.append(str(link))
+    return " · ".join(parts) if parts else "Wireless and Bluetooth checked"
+
+
+def plain_windows(windows: dict[str, Any]) -> str:
+    if not windows:
+        return "Windows configuration checked"
+    edition = _cv(windows.get("edition"))
+    activation = windows.get("activation_status")
+    act_val = activation.get("value") if isinstance(activation, dict) else activation
+    parts = []
+    if edition:
+        parts.append(str(edition))
+    if act_val is True:
+        parts.append("Activated")
+    elif act_val is False:
+        parts.append("Activation needs attention")
+    pending = windows.get("pending_updates")
+    pending_val = pending.get("value") if isinstance(pending, dict) else pending
+    if pending_val is True:
+        parts.append("Updates pending")
+    elif pending_val is False:
+        parts.append("Up to date")
+    return " · ".join(parts) if parts else "Windows configuration checked"
+
+
+def plain_ports(ports: dict[str, Any]) -> str:
+    if not ports:
+        return "Port inventory recorded"
+    parts = []
+    usb_a = _cv(ports.get("usb_a_count"))
+    usb_c = _cv(ports.get("usb_c_count"))
+    if usb_a:
+        parts.append(f"{usb_a} USB‑A")
+    if usb_c:
+        parts.append(f"{usb_c} USB‑C")
+    hdmi = _cv(ports.get("hdmi_count"))
+    if hdmi:
+        parts.append(f"{hdmi} HDMI")
+    dp = _cv(ports.get("display_port_count"))
+    if dp:
+        parts.append(f"{dp} DisplayPort")
+    tb = ports.get("thunderbolt")
+    tb_val = tb.get("value") if isinstance(tb, dict) else tb
+    if tb_val is True:
+        parts.append("Thunderbolt")
+    eth = ports.get("ethernet")
+    eth_val = eth.get("value") if isinstance(eth, dict) else eth
+    if eth_val is True:
+        parts.append("Ethernet")
+    sd = ports.get("sd_card_reader")
+    sd_val = sd.get("value") if isinstance(sd, dict) else sd
+    if sd_val is True:
+        parts.append("SD card reader")
+    return ", ".join(parts) if parts else "Port inventory recorded"
+
+
 def grade_subtitle(grade: str) -> str:
     g = (grade or "C").upper().replace("+", "")
     subtitles = {
@@ -259,7 +371,7 @@ def humanize_field_name(key: str) -> str:
         "full_charge_capacity_mwh": "Full charge capacity",
         "current_capacity_mwh": "Current capacity",
         "cycle_count": "Cycle count",
-        "wear_percent": "Wear level",
+        "wear_percent": "Capacity wear",
         "power_on_hours": "Power-on hours",
         "power_cycle_count": "Power cycles",
         "percentage_used": "Percentage used",

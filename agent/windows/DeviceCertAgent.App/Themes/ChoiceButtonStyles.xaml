@@ -1,0 +1,194 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+  <!-- Choice buttons use three visual states:
+       1. Disabled — muted, not actionable yet
+       2. Preferred — enabled, unanswered; accent border, plain background (expected path: Yes / Pass)
+       3. Selected — committed answer; solid accent fill
+       No / Fail stay neutral until selected. -->
+  <Style x:Key="ChoiceButtonBase" TargetType="Button" BasedOn="{StaticResource ChoiceButton}">
+    <Style.Triggers>
+      <Trigger Property="IsEnabled" Value="False">
+        <Setter Property="Opacity" Value="0.45"/>
+        <Setter Property="Cursor" Value="Arrow"/>
+      </Trigger>
+    </Style.Triggers>
+  </Style>
+
+  <Style x:Key="SpeakerLeftYesChoice" TargetType="Button" BasedOn="{StaticResource ChoiceButtonBase}">
+    <Style.Triggers>
+      <MultiDataTrigger>
+        <MultiDataTrigger.Conditions>
+          <Condition Binding="{Binding RelativeSource={RelativeSource Self}, Path=IsEnabled}" Value="True"/>
+          <Condition Binding="{Binding IsLeftSpeakerPending}" Value="True"/>
+        </MultiDataTrigger.Conditions>
+        <Setter Property="Background" Value="{StaticResource SurfaceBrush}"/>
+        <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}"/>
+        <Setter Property="BorderThickness" Value="2"/>
+        <Setter Property="Foreground" Value="{StaticResource AccentBrush}"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+      </MultiDataTrigger>
+      <DataTrigger Binding="{Binding IsLeftSpeakerYesSelected}" Value="True">
+        <Setter Property="Background" Value="{StaticResource AccentBrush}"/>
+        <Setter Property="Foreground" Value="White"/>
+        <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}"/>
+        <Setter Property="BorderThickness" Value="2"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+      </DataTrigger>
+    </Style.Triggers>
+  </Style>
+
+  <Style x:Key="SpeakerLeftNoChoice" TargetType="Button" BasedOn="{StaticResource ChoiceButtonBase}">
+    <Style.Triggers>
+      <DataTrigger Binding="{Binding IsLeftSpeakerNoSelected}" Value="True">
+        <Setter Property="Background" Value="{StaticResource AccentBrush}"/>
+        <Setter Property="Foreground" Value="White"/>
+        <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}"/>
+        <Setter Property="BorderThickness" Value="2"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+      </DataTrigger>
+    </Style.Triggers>
+  </Style>
+
+  <Style x:Key="SpeakerRightYesChoice" TargetType="Button" BasedOn="{StaticResource ChoiceButtonBase}">
+    <Style.Triggers>
+      <MultiDataTrigger>
+        <MultiDataTrigger.Conditions>
+          <Condition Binding="{Binding RelativeSource={RelativeSource Self}, Path=IsEnabled}" Value="True"/>
+          <Condition Binding="{Binding IsRightSpeakerPending}" Value="True"/>
+        </MultiDataTrigger.Conditions>
+        <Setter Property="Background" Value="{StaticResource SurfaceBrush}"/>
+        <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}"/>
+        <Setter Property="BorderThickness" Value="2"/>
+        <Setter Property="Foreground" Value="{StaticResource AccentBrush}"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+      </MultiDataTrigger>
+      <DataTrigger Binding="{Binding IsRightSpeakerYesSelected}" Value="True">
+        <Setter Property="Background" Value="{StaticResource AccentBrush}"/>
+        <Setter Property="Foreground" Value="White"/>
+        <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}"/>
+        <Setter Property="BorderThickness" Value="2"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+      </DataTrigger>
+    </Style.Triggers>
+  </Style>
+
+  <Style x:Key="SpeakerRightNoChoice" TargetType="Button" BasedOn="{StaticResource ChoiceButtonBase}">
+    <Style.Triggers>
+      <DataTrigger Binding="{Binding IsRightSpeakerNoSelected}" Value="True">
+        <Setter Property="Background" Value="{StaticResource AccentBrush}"/>
+        <Setter Property="Foreground" Value="White"/>
+        <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}"/>
+        <Setter Property="BorderThickness" Value="2"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+      </DataTrigger>
+    </Style.Triggers>
+  </Style>
+
+  <Style x:Key="MicYesChoice" TargetType="Button" BasedOn="{StaticResource ChoiceButtonBase}">
+    <Style.Triggers>
+      <MultiDataTrigger>
+        <MultiDataTrigger.Conditions>
+          <Condition Binding="{Binding RelativeSource={RelativeSource Self}, Path=IsEnabled}" Value="True"/>
+          <Condition Binding="{Binding IsMicPending}" Value="True"/>
+        </MultiDataTrigger.Conditions>
+        <Setter Property="Background" Value="{StaticResource SurfaceBrush}"/>
+        <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}"/>
+        <Setter Property="BorderThickness" Value="2"/>
+        <Setter Property="Foreground" Value="{StaticResource AccentBrush}"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+      </MultiDataTrigger>
+      <DataTrigger Binding="{Binding IsMicYesSelected}" Value="True">
+        <Setter Property="Background" Value="{StaticResource AccentBrush}"/>
+        <Setter Property="Foreground" Value="White"/>
+        <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}"/>
+        <Setter Property="BorderThickness" Value="2"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+      </DataTrigger>
+    </Style.Triggers>
+  </Style>
+
+  <Style x:Key="MicNoChoice" TargetType="Button" BasedOn="{StaticResource ChoiceButtonBase}">
+    <Style.Triggers>
+      <DataTrigger Binding="{Binding IsMicNoSelected}" Value="True">
+        <Setter Property="Background" Value="{StaticResource AccentBrush}"/>
+        <Setter Property="Foreground" Value="White"/>
+        <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}"/>
+        <Setter Property="BorderThickness" Value="2"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+      </DataTrigger>
+    </Style.Triggers>
+  </Style>
+
+  <Style x:Key="CameraYesChoice" TargetType="Button" BasedOn="{StaticResource ChoiceButtonBase}">
+    <Style.Triggers>
+      <MultiDataTrigger>
+        <MultiDataTrigger.Conditions>
+          <Condition Binding="{Binding RelativeSource={RelativeSource Self}, Path=IsEnabled}" Value="True"/>
+          <Condition Binding="{Binding IsCameraPending}" Value="True"/>
+        </MultiDataTrigger.Conditions>
+        <Setter Property="Background" Value="{StaticResource SurfaceBrush}"/>
+        <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}"/>
+        <Setter Property="BorderThickness" Value="2"/>
+        <Setter Property="Foreground" Value="{StaticResource AccentBrush}"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+      </MultiDataTrigger>
+      <DataTrigger Binding="{Binding IsCameraYesSelected}" Value="True">
+        <Setter Property="Background" Value="{StaticResource AccentBrush}"/>
+        <Setter Property="Foreground" Value="White"/>
+        <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}"/>
+        <Setter Property="BorderThickness" Value="2"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+      </DataTrigger>
+    </Style.Triggers>
+  </Style>
+
+  <Style x:Key="CameraNoChoice" TargetType="Button" BasedOn="{StaticResource ChoiceButtonBase}">
+    <Style.Triggers>
+      <DataTrigger Binding="{Binding IsCameraNoSelected}" Value="True">
+        <Setter Property="Background" Value="{StaticResource AccentBrush}"/>
+        <Setter Property="Foreground" Value="White"/>
+        <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}"/>
+        <Setter Property="BorderThickness" Value="2"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+      </DataTrigger>
+    </Style.Triggers>
+  </Style>
+
+  <Style x:Key="UsbPassChoice" TargetType="Button" BasedOn="{StaticResource ChoiceButtonBase}">
+    <Style.Triggers>
+      <MultiDataTrigger>
+        <MultiDataTrigger.Conditions>
+          <Condition Binding="{Binding RelativeSource={RelativeSource Self}, Path=IsEnabled}" Value="True"/>
+          <Condition Binding="{Binding IsUsbPending}" Value="True"/>
+        </MultiDataTrigger.Conditions>
+        <Setter Property="Background" Value="{StaticResource SurfaceBrush}"/>
+        <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}"/>
+        <Setter Property="BorderThickness" Value="2"/>
+        <Setter Property="Foreground" Value="{StaticResource AccentBrush}"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+      </MultiDataTrigger>
+      <DataTrigger Binding="{Binding IsUsbPassSelected}" Value="True">
+        <Setter Property="Background" Value="{StaticResource AccentBrush}"/>
+        <Setter Property="Foreground" Value="White"/>
+        <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}"/>
+        <Setter Property="BorderThickness" Value="2"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+      </DataTrigger>
+    </Style.Triggers>
+  </Style>
+
+  <Style x:Key="UsbFailChoice" TargetType="Button" BasedOn="{StaticResource ChoiceButtonBase}">
+    <Style.Triggers>
+      <DataTrigger Binding="{Binding IsUsbFailSelected}" Value="True">
+        <Setter Property="Background" Value="{StaticResource AccentBrush}"/>
+        <Setter Property="Foreground" Value="White"/>
+        <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}"/>
+        <Setter Property="BorderThickness" Value="2"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+      </DataTrigger>
+    </Style.Triggers>
+  </Style>
+
+</ResourceDictionary>
+

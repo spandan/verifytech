@@ -99,6 +99,7 @@ Or use only SQL (tables reset but orphaned storage files may remain):
 | File | Purpose |
 |------|---------|
 | `schema.sql` | **Canonical** full schema (fresh install or after `reset.sql`) |
+| `migrations/` | Incremental ALTER scripts for existing databases |
 | `reset.sql` | Teardown only — run before `schema.sql` |
 | `data_reset.sql` | Clear application data only (prod promotion; keeps schema + agent releases) |
 | `backups/` | Auto-created SQL dumps from reset script |

@@ -2,6 +2,7 @@
 
 import type { InspectionReport as InspectionReportPayload } from "@/lib/api";
 import { extractOverallScoreFromReport, scoreToCondition } from "@/lib/certification-summary";
+import { parseCheckItem, type CheckItem, type CheckTone } from "@/lib/check-result";
 
 import { ConditionBadge, ScoreDisplay } from "@/components/ConditionBadge";
 
@@ -24,6 +25,9 @@ export interface ReportSummary {
   memory?: string;
   thermals?: string;
   screen?: string;
+  network?: string;
+  windows?: string;
+  ports?: string;
   functional?: Record<string, string>;
   security?: {
     headline?: string;
@@ -32,7 +36,9 @@ export interface ReportSummary {
     tpm?: string;
   };
   resale_readiness?: string;
-  warnings?: PlainWarning[];
+  warnings?: PlainWarning[] | string[];
+  check_items?: CheckItem[];
+  functional_checks?: CheckItem[];
 }
 
 export interface AdvancedField {
@@ -51,6 +57,14 @@ export interface ReportAdvanced {
   security?: { fields?: AdvancedField[]; [key: string]: unknown };
   performance?: { benchmark?: AdvancedField[]; thermals?: AdvancedField[]; memory?: AdvancedField[] };
   functional?: Record<string, unknown>;
+  network?: AdvancedField[];
+  windows?: AdvancedField[];
+  ports?: {
+    inventory?: AdvancedField[];
+    features?: Record<string, unknown>;
+    certification_status?: Record<string, string>;
+    notes?: string[];
+  };
   collection_metadata?: Record<string, unknown>;
   evidence?: Array<{ artifact_type?: string; label?: string; signed_url?: string }>;
   narrative_details?: Record<string, string | undefined>;
@@ -64,11 +78,28 @@ export interface NormalizedReport {
 
 /* ── Legacy → two-layer ─────────────────────────────────────────────── */
 
+function normalizeWarnings(raw: ReportSummary["warnings"]): PlainWarning[] {
+  if (!raw?.length) return [];
+  return raw.map((w) => {
+    if (typeof w === "string") {
+      return { title: "Important", explanation: simplifyLabel(w) };
+    }
+    return {
+      title: w.title || "Important",
+      explanation: simplifyLabel(w.explanation),
+    };
+  });
+}
+
 function normalizeReport(raw: InspectionReportPayload): NormalizedReport {
   if (raw.summary && typeof raw.summary === "object") {
+    const summary = raw.summary as ReportSummary;
     return {
       version: raw.version,
-      summary: raw.summary as ReportSummary,
+      summary: {
+        ...summary,
+        warnings: normalizeWarnings(summary.warnings),
+      },
       advanced: (raw.advanced as ReportAdvanced) ?? {},
     };
   }
@@ -111,10 +142,9 @@ function normalizeReport(raw: InspectionReportPayload): NormalizedReport {
         tpm: simplifyLabel(String((raw.security as Record<string, unknown>)?.tpm ?? "Not verified")),
       },
       resale_readiness: raw.refurbisher_notes ?? raw.expected_service_life ?? "Review inspection details",
-      warnings: (raw.warnings ?? []).map((w) => ({
-        title: "Important",
-        explanation: simplifyLabel(String(w)),
-      })),
+      warnings: normalizeWarnings(
+        (raw.warnings ?? []).map((w) => ({ title: "Important", explanation: String(w) })),
+      ),
     },
     advanced: {
       evidence: raw.evidence,
@@ -147,12 +177,6 @@ const FUNCTIONAL_LABELS: Record<string, string> = {
   screen: "Screen",
 };
 
-const SECURITY_LABELS: Record<string, string> = {
-  secure_boot: "Secure Boot",
-  encryption: "Disk encryption",
-  tpm: "TPM chip",
-};
-
 /* ── Main component ─────────────────────────────────────────────────── */
 
 export function InspectionReport({
@@ -166,169 +190,189 @@ export function InspectionReport({
   };
 }) {
   const { summary, advanced } = normalizeReport(report);
-  const warnings = summary.warnings ?? [];
+  const warnings = (summary.warnings ?? []) as PlainWarning[];
   const overallScore = extractOverallScoreFromReport(report, certContext);
   const condition = scoreToCondition(overallScore);
+  const grade = summary.certification_grade;
 
   return (
-    <article className="card mt-8">
-      <div className="card-body space-y-6">
-        {/* Layer 1 — buyer summary */}
-        <header className="border-b border-border pb-6">
-          <p className="text-sm font-medium text-secondary uppercase tracking-wide">
-            Device inspection report
-          </p>
-          <div className="mt-3 flex flex-wrap items-end gap-4">
-            <div className="flex flex-wrap items-center gap-3">
-              <ConditionBadge score={overallScore} label={condition} />
-              <ScoreDisplay score={overallScore} />
+    <article className="cert-report">
+      <div className="cert-report__body">
+        {/* Hero — grade and device summary */}
+        <header className="cert-report__hero">
+          <p className="cert-report__eyebrow">Device inspection report</p>
+          <div className="cert-report__hero-grid">
+            <div className="cert-report__grade-block">
+              {grade && (
+                <p className="cert-report__grade-letter" aria-label={`Grade ${grade}`}>
+                  {grade}
+                </p>
+              )}
+              <div className="cert-report__score-row">
+                <ConditionBadge score={overallScore} label={condition} />
+                <ScoreDisplay score={overallScore} />
+              </div>
             </div>
-            <div className="flex-1 min-w-[200px]">
-              <h2 className="text-xl font-semibold">{summary.device_name}</h2>
-              <p className="text-secondary text-sm mt-1">{summary.grade_subtitle}</p>
+            <div className="cert-report__device-block">
+              <h2 className="cert-report__device-name">{summary.device_name}</h2>
+              <p className="cert-report__subtitle">{summary.grade_subtitle}</p>
               {summary.specs_line && (
-                <p className="text-sm mt-2 text-primary">{summary.specs_line}</p>
+                <p className="cert-report__specs">{summary.specs_line}</p>
+              )}
+              {summary.display_resolution && (
+                <p className="cert-report__resolution">Display: {summary.display_resolution}</p>
               )}
             </div>
           </div>
         </header>
 
         {warnings.length > 0 && (
-          <section className="rounded-xl border border-amber-200 bg-amber-50/80 dark:bg-amber-950/20 dark:border-amber-900/50 p-4 space-y-3">
-            <h3 className="text-sm font-semibold text-amber-900 dark:text-amber-100">
+          <section className="cert-report__warnings">
+            <h3 className="cert-report__section-title cert-report__section-title--warn">
               Important notices
             </h3>
-            {warnings.map((w, i) => (
-              <div key={i}>
-                <p className="text-sm font-medium text-amber-950 dark:text-amber-50">{w.title}</p>
-                <p className="text-sm text-amber-800 dark:text-amber-200/90 mt-0.5">
-                  {w.explanation}
-                </p>
-              </div>
-            ))}
+            <ul className="cert-report__warning-list">
+              {warnings.map((w, i) => (
+                <li key={i} className="cert-report__warning-item">
+                  <p className="cert-report__warning-title">{w.title}</p>
+                  <p className="cert-report__warning-text">{w.explanation}</p>
+                </li>
+              ))}
+            </ul>
           </section>
         )}
 
-        <section>
-          <h3 className="text-sm font-semibold mb-3 text-secondary uppercase tracking-wide">
-            Buyer summary
-          </h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <SummaryCard label="Battery" value={summary.battery} />
-            <SummaryCard label="Storage" value={summary.storage} />
+        {/* Buyer-facing condition summary — always visible */}
+        <section className="cert-report__section">
+          <h3 className="cert-report__section-title">What we checked</h3>
+          <div className="cert-report__check-list">
+            {buildCheckItems(summary, "hardware").map((item) => (
+              <CheckResult key={item.label} item={item} />
+            ))}
           </div>
         </section>
 
-        {summary.resale_readiness && (
-          <section className="rounded-xl border border-trust/30 bg-trust/5 p-4">
-            <h3 className="text-sm font-semibold text-trust mb-1">Resale readiness</h3>
-            <p className="text-sm">{summary.resale_readiness}</p>
+        <section className="cert-report__section">
+          <h3 className="cert-report__section-title">Interactive checks</h3>
+          <div className="cert-report__check-list cert-report__check-list--compact">
+            {buildCheckItems(summary, "functional").map((item) => (
+              <CheckResult key={item.label} item={item} compact />
+            ))}
+          </div>
+        </section>
+
+        <section className="cert-report__section cert-report__security">
+          <h3 className="cert-report__section-title">Security</h3>
+          <p className="cert-report__security-headline">{summary.security?.headline}</p>
+          <div className="cert-report__check-list cert-report__check-list--compact">
+            <CheckResult item={parseCheckItem("Secure Boot", summary.security?.secure_boot)} compact />
+            <CheckResult item={parseCheckItem("Disk encryption", summary.security?.encryption)} compact />
+            <CheckResult item={parseCheckItem("TPM chip", summary.security?.tpm)} compact />
+          </div>
+        </section>
+
+        {(summary.network || summary.ports || summary.windows) && (
+          <section className="cert-report__section">
+            <h3 className="cert-report__section-title">Connectivity &amp; setup</h3>
+            <div className="cert-report__check-list cert-report__check-list--compact">
+              {summary.network && <CheckResult item={parseCheckItem("Wireless", summary.network)} compact />}
+              {summary.ports && <CheckResult item={parseCheckItem("Ports", summary.ports)} compact />}
+              {summary.windows && <CheckResult item={parseCheckItem("Windows", summary.windows)} compact />}
+            </div>
           </section>
         )}
 
-        {/* Layer 2 — collapsed technical details */}
-        <section className="pt-4 border-t border-border space-y-2">
-          <Collapsible title="Show technical details" defaultOpen={false}>
-            <div className="space-y-6 pt-4">
-              <section>
-                <h3 className="text-sm font-semibold mb-3 text-secondary uppercase tracking-wide">
-                  Condition at a glance
-                </h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                  <SummaryCard label="Battery" value={summary.battery} />
-                  <SummaryCard label="Storage" value={summary.storage} />
-                  <SummaryCard label="Performance" value={summary.performance} />
-                  <SummaryCard label="Screen" value={summary.screen} />
-                  <SummaryCard label="Memory" value={summary.memory} />
-                  <SummaryCard label="Cooling" value={summary.thermals} />
-                </div>
-              </section>
+        {summary.resale_readiness && (
+          <section className="cert-report__readiness">
+            <h3 className="cert-report__section-title">Resale readiness</h3>
+            <p>{summary.resale_readiness}</p>
+          </section>
+        )}
 
-              <section>
-                <h3 className="text-sm font-semibold mb-3 text-secondary uppercase tracking-wide">
-                  Functional checks
-                </h3>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                  {summary.functional &&
-                    Object.entries(summary.functional).map(([key, value]) => (
-                      <SummaryCard
-                        key={key}
-                        label={FUNCTIONAL_LABELS[key] ?? key}
-                        value={value}
-                        compact
-                      />
-                    ))}
-                </div>
-              </section>
-
-              <section className="rounded-xl bg-surface-muted p-4">
-                <h3 className="text-sm font-semibold mb-2">Security</h3>
-                <p className="text-sm font-medium mb-3">{summary.security?.headline}</p>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  <SummaryCard label="Secure Boot" value={summary.security?.secure_boot} compact />
-                  <SummaryCard label="Encryption" value={summary.security?.encryption} compact />
-                  <SummaryCard label="TPM" value={summary.security?.tpm} compact />
-                </div>
-              </section>
-
-              <div className="space-y-2">
-              <Collapsible title="Advanced battery data" nested>
+        {/* Technical details — collapsed by default */}
+        <section className="cert-report__technical">
+          <Collapsible title="Technical details" defaultOpen={false}>
+            <div className="cert-report__technical-inner">
+              <Collapsible title="Battery diagnostics" nested>
                 <FieldList fields={advanced.battery?.fields} />
                 {advanced.battery?.certification_notes && advanced.battery.certification_notes.length > 0 && (
                   <NoteList notes={advanced.battery.certification_notes} />
                 )}
               </Collapsible>
 
-              <Collapsible title="Advanced storage data" nested>
+              <Collapsible title="Storage diagnostics" nested>
                 {advanced.storage?.length ? (
                   advanced.storage.map((drive, i) => (
-                    <div key={i} className="mb-4 last:mb-0">
-                      <p className="text-sm font-medium mb-2">{drive.headline}</p>
+                    <div key={i} className="cert-report__drive-block">
+                      <p className="cert-report__drive-headline">{drive.headline}</p>
                       <FieldList fields={drive.fields} />
                       {drive.disclosure && (
-                        <p className="text-xs text-muted mt-2">{drive.disclosure}</p>
+                        <p className="cert-report__disclosure">{drive.disclosure}</p>
                       )}
-                      {drive.collection && (
-                        <CollectionMeta meta={drive.collection} />
-                      )}
+                      {drive.collection && <CollectionMeta meta={drive.collection} />}
                     </div>
                   ))
                 ) : (
-                  <p className="text-sm text-muted">No detailed storage data on file.</p>
+                  <p className="cert-report__empty">No detailed storage data on file.</p>
                 )}
               </Collapsible>
 
-              <Collapsible title="Security details" nested>
+              <Collapsible title="Security diagnostics" nested>
                 <FieldList fields={advanced.security?.fields} />
                 <TriStateBlock title="TPM detection" data={advanced.security?.tpm as Record<string, unknown>} />
                 <TriStateBlock title="Secure Boot" data={advanced.security?.secure_boot as Record<string, unknown>} />
                 <TriStateBlock title="Encryption" data={advanced.security?.device_encryption as Record<string, unknown>} />
               </Collapsible>
 
-              <Collapsible title="Benchmark & performance details" nested>
-                <p className="text-xs font-medium text-secondary mb-1">Benchmark scores</p>
+              <Collapsible title="Performance &amp; thermals" nested>
+                <p className="cert-report__field-group-label">Benchmark scores</p>
                 <FieldList fields={advanced.performance?.benchmark} />
-                <p className="text-xs font-medium text-secondary mb-1 mt-3">Thermals</p>
+                <p className="cert-report__field-group-label">Thermals</p>
                 <FieldList fields={advanced.performance?.thermals} />
-                <p className="text-xs font-medium text-secondary mb-1 mt-3">Memory</p>
+                <p className="cert-report__field-group-label">Memory</p>
                 <FieldList fields={advanced.performance?.memory} />
               </Collapsible>
 
-              <Collapsible title="Functional test evidence" nested>
+              <Collapsible title="Network &amp; ports" nested>
+                <p className="cert-report__field-group-label">Network</p>
+                <FieldList fields={advanced.network} />
+                <p className="cert-report__field-group-label">Windows</p>
+                <FieldList fields={advanced.windows} />
+                {advanced.ports?.inventory && (
+                  <>
+                    <p className="cert-report__field-group-label">Port inventory</p>
+                    <FieldList fields={advanced.ports.inventory} />
+                  </>
+                )}
+                {advanced.ports?.certification_status &&
+                  Object.keys(advanced.ports.certification_status).length > 0 && (
+                    <>
+                      <p className="cert-report__field-group-label">Port verification</p>
+                      <dl className="cert-report__field-list">
+                        {Object.entries(advanced.ports.certification_status).map(([k, v]) => (
+                          <div key={k}>
+                            <dt>{humanize(k)}</dt>
+                            <dd>{v}</dd>
+                          </div>
+                        ))}
+                      </dl>
+                    </>
+                  )}
+              </Collapsible>
+
+              <Collapsible title="Functional test records" nested>
                 <FunctionalEvidence data={advanced.functional} />
               </Collapsible>
 
-              <Collapsible title="Collection metadata" nested>
+              <Collapsible title="Scan metadata" nested>
                 <JsonBlock data={advanced.collection_metadata} />
                 {advanced.narrative_details && (
-                  <div className="mt-3 space-y-2">
+                  <div className="cert-report__narrative">
                     {Object.entries(advanced.narrative_details).map(([k, v]) =>
                       v ? (
                         <div key={k}>
-                          <p className="text-xs font-medium text-secondary capitalize">
-                            {k.replace(/_/g, " ")}
-                          </p>
-                          <p className="text-xs text-muted mt-0.5">{v}</p>
+                          <p className="cert-report__field-group-label">{humanize(k)}</p>
+                          <p className="cert-report__narrative-text">{v}</p>
                         </div>
                       ) : null
                     )}
@@ -336,32 +380,31 @@ export function InspectionReport({
                 )}
               </Collapsible>
 
-              <Collapsible title="Raw evidence files" nested>
+              <Collapsible title="Evidence files" nested>
                 {advanced.evidence && advanced.evidence.length > 0 ? (
-                  <ul className="space-y-2">
+                  <ul className="cert-report__evidence-list">
                     {advanced.evidence.map((e) => (
                       <li key={e.artifact_type ?? e.label}>
-                        <p className="text-sm font-medium">{e.label ?? "Evidence"}</p>
+                        <p className="cert-report__evidence-label">{e.label ?? "Evidence"}</p>
                         {e.signed_url ? (
                           <a
                             href={e.signed_url}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="text-sm text-trust hover:underline"
+                            className="cert-report__evidence-link"
                           >
                             Open evidence file
                           </a>
                         ) : (
-                          <p className="text-xs text-muted">Link not available</p>
+                          <p className="cert-report__empty">Link not available</p>
                         )}
                       </li>
                     ))}
                   </ul>
                 ) : (
-                  <p className="text-sm text-muted">No evidence files attached to this certificate.</p>
+                  <p className="cert-report__empty">No evidence files attached to this certificate.</p>
                 )}
               </Collapsible>
-              </div>
             </div>
           </Collapsible>
         </section>
@@ -370,39 +413,39 @@ export function InspectionReport({
   );
 }
 
-/* ── Primitives ─────────────────────────────────────────────────────── */
+/* ── Check result rows ──────────────────────────────────────────────── */
 
-function SummaryCard({
-  label,
-  value,
-  compact,
-}: {
-  label: string;
-  value?: string | null;
-  compact?: boolean;
-}) {
-  const display = value?.trim() || "Not available";
-  const tone = statusTone(display);
+function buildCheckItems(summary: ReportSummary, group: "hardware" | "functional"): CheckItem[] {
+  if (group === "hardware") {
+    if (summary.check_items?.length) return summary.check_items;
+    return [
+      parseCheckItem("Battery", summary.battery),
+      parseCheckItem("Storage", summary.storage),
+      parseCheckItem("Performance", summary.performance),
+      parseCheckItem("Screen", summary.screen),
+      parseCheckItem("Memory", summary.memory),
+      parseCheckItem("Cooling", summary.thermals),
+    ];
+  }
 
-  return (
-    <div
-      className={`rounded-lg bg-surface-muted ${compact ? "p-2.5" : "p-3"} border border-transparent`}
-    >
-      <p className="text-xs text-secondary">{label}</p>
-      <p className={`${compact ? "text-sm" : "text-sm"} font-medium mt-0.5 ${tone}`}>{display}</p>
-    </div>
+  if (summary.functional_checks?.length) return summary.functional_checks;
+  if (!summary.functional) return [];
+  return Object.entries(summary.functional).map(([key, value]) =>
+    parseCheckItem(FUNCTIONAL_LABELS[key] ?? key, value),
   );
 }
 
-function statusTone(value: string): string {
-  const v = value.toLowerCase();
-  if (v.includes("verified") || v.includes("healthy") || v.includes("enabled") || v.includes("excellent") || v.includes("good"))
-    return "text-emerald-700 dark:text-emerald-400";
-  if (v.includes("failed") || v.includes("poor") || v.includes("disabled") || v.includes("replacement"))
-    return "text-red-700 dark:text-red-400";
-  if (v.includes("not tested") || v.includes("not available") || v.includes("unclear"))
-    return "text-muted";
-  return "";
+function CheckResult({ item, compact }: { item: CheckItem; compact?: boolean }) {
+  const tone = (item.tone as CheckTone) || "neutral";
+  return (
+    <div className={`check-result ${compact ? "check-result--compact" : ""}`}>
+      <p className="check-result__label">{item.label}</p>
+      <div className="check-result__body">
+        <p className={`check-result__headline check-result__headline--${tone}`}>{item.headline}</p>
+        {item.detail && <p className="check-result__detail">{item.detail}</p>}
+      </div>
+    </div>
+  );
 }
 
 function Collapsible({
@@ -418,28 +461,30 @@ function Collapsible({
 }) {
   return (
     <details
-      className={`group rounded-lg border border-border ${nested ? "ml-0" : ""} open:bg-surface-muted/50`}
+      className={`cert-collapsible ${nested ? "cert-collapsible--nested" : ""}`}
       {...(defaultOpen ? { open: true } : {})}
     >
-      <summary className="cursor-pointer list-none px-4 py-3 text-sm font-medium hover:bg-surface-muted/80 rounded-lg [&::-webkit-details-marker]:hidden flex items-center justify-between gap-2">
+      <summary className="cert-collapsible__summary">
         <span>{title}</span>
-        <span className="text-muted text-xs group-open:rotate-180 transition-transform">▼</span>
+        <span className="cert-collapsible__chevron" aria-hidden="true">
+          ▼
+        </span>
       </summary>
-      <div className="px-4 pb-4 text-sm">{children}</div>
+      <div className="cert-collapsible__content">{children}</div>
     </details>
   );
 }
 
 function FieldList({ fields }: { fields?: AdvancedField[] }) {
   if (!fields?.length) {
-    return <p className="text-sm text-muted">No additional data recorded.</p>;
+    return <p className="cert-report__empty">No additional data recorded.</p>;
   }
   return (
-    <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2">
+    <dl className="cert-report__field-list">
       {fields.map((f) => (
         <div key={f.label}>
-          <dt className="text-xs text-secondary">{f.label}</dt>
-          <dd className="text-sm font-medium">{f.value}</dd>
+          <dt>{f.label}</dt>
+          <dd>{f.value}</dd>
         </div>
       ))}
     </dl>
@@ -448,7 +493,7 @@ function FieldList({ fields }: { fields?: AdvancedField[] }) {
 
 function NoteList({ notes }: { notes: string[] }) {
   return (
-    <ul className="mt-3 list-disc pl-4 text-xs text-muted space-y-1">
+    <ul className="cert-report__notes">
       {notes.map((n, i) => (
         <li key={i}>{n}</li>
       ))}
@@ -458,11 +503,11 @@ function NoteList({ notes }: { notes: string[] }) {
 
 function CollectionMeta({ meta }: { meta: Record<string, unknown> }) {
   return (
-    <dl className="mt-2 grid grid-cols-2 gap-1 text-xs">
+    <dl className="cert-report__collection-meta">
       {Object.entries(meta).map(([k, v]) => (
         <div key={k}>
-          <dt className="text-secondary inline">{humanize(k)}: </dt>
-          <dd className="inline text-muted">{String(v)}</dd>
+          <dt>{humanize(k)}:</dt>
+          <dd>{String(v)}</dd>
         </div>
       ))}
     </dl>
@@ -472,8 +517,8 @@ function CollectionMeta({ meta }: { meta: Record<string, unknown> }) {
 function TriStateBlock({ title, data }: { title: string; data?: Record<string, unknown> }) {
   if (!data) return null;
   return (
-    <div className="mt-3 text-xs">
-      <p className="font-medium text-secondary mb-1">{title}</p>
+    <div className="cert-report__tristate">
+      <p className="cert-report__field-group-label">{title}</p>
       <p>Status: {String(data.status ?? "—")}</p>
       {data.data_source != null && <p>Source: {String(data.data_source)}</p>}
       {data.collection_method != null && <p>Method: {String(data.collection_method)}</p>}
@@ -483,41 +528,40 @@ function TriStateBlock({ title, data }: { title: string; data?: Record<string, u
 
 function FunctionalEvidence({ data }: { data?: Record<string, unknown> }) {
   if (!data || Object.keys(data).length === 0) {
-    return <p className="text-sm text-muted">No functional test records.</p>;
+    return <p className="cert-report__empty">No functional test records.</p>;
   }
   const tests = [
     ["camera_test", "Camera test"],
     ["microphone_test", "Microphone test"],
     ["speaker_test", "Speaker test"],
     ["usb_test", "USB test"],
-    ["display_output_test", "External display"],
     ["audio_jack_test", "Headset jack"],
   ] as const;
   return (
-    <div className="space-y-4">
+    <div className="cert-report__functional-evidence">
       {tests.map(([key, title]) => {
         const t = data[key];
         if (!t || typeof t !== "object") return null;
         const rec = t as Record<string, unknown>;
         return (
           <div key={key}>
-            <p className="text-sm font-medium mb-1">{title}</p>
-            <dl className="grid grid-cols-2 gap-1 text-xs">
+            <p className="cert-report__field-group-label">{title}</p>
+            <dl className="cert-report__field-list cert-report__field-list--compact">
               {rec.result != null && (
                 <>
-                  <dt className="text-secondary">Result</dt>
+                  <dt>Result</dt>
                   <dd>{String(rec.result)}</dd>
                 </>
               )}
               {rec.tested != null && (
                 <>
-                  <dt className="text-secondary">Tested</dt>
+                  <dt>Tested</dt>
                   <dd>{rec.tested ? "Yes" : "No"}</dd>
                 </>
               )}
               {rec.reason != null && (
                 <>
-                  <dt className="text-secondary">Note</dt>
+                  <dt>Note</dt>
                   <dd>{String(rec.reason)}</dd>
                 </>
               )}
@@ -531,12 +575,10 @@ function FunctionalEvidence({ data }: { data?: Record<string, unknown> }) {
 
 function JsonBlock({ data }: { data?: unknown }) {
   if (!data || (typeof data === "object" && Object.keys(data as object).length === 0)) {
-    return <p className="text-sm text-muted">No data.</p>;
+    return <p className="cert-report__empty">No data.</p>;
   }
   return (
-    <pre className="text-xs bg-surface-muted rounded-lg p-3 overflow-x-auto max-h-64 text-muted">
-      {JSON.stringify(data, null, 2)}
-    </pre>
+    <pre className="cert-report__json">{JSON.stringify(data, null, 2)}</pre>
   );
 }
 

@@ -1,0 +1,19 @@
+Certronx Agent — system requirements
+====================================
+
+DeviceCertAgent.exe is a framework-dependent app (the .NET runtime is NOT bundled).
+
+Required on Windows 10/11 x64:
+  .NET 8 Desktop Runtime (x64)
+
+Download:
+  https://dotnet.microsoft.com/download/dotnet/8.0
+
+Choose ".NET Desktop Runtime 8.x" → Windows → x64.
+
+Recommended launcher:
+  Launch-CertronxAgent.cmd
+  (checks for the runtime and opens the download page if it is missing)
+
+If Windows shows a ".NET required" dialog when you double-click the exe,
+use the link above to install the Desktop Runtime, then try again.

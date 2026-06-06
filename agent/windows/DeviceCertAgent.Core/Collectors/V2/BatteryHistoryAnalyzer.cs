@@ -12,10 +12,12 @@ public sealed class BatteryHistoryAnalyzer
         bool includeHistoryReport = true)
     {
         var assessment = new BatteryIntelligenceCollector().Collect(adminMode, warnings);
-        if (!adminMode || !includeHistoryReport)
+        if (!includeHistoryReport)
+            return (assessment, null);
+
+        if (!adminMode)
         {
-            if (!adminMode)
-                warnings.Add("battery_v2.1: admin required for full capacity history");
+            warnings.Add("battery_v2.1: admin required for full capacity history");
             return (assessment, null);
         }
 

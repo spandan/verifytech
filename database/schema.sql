@@ -97,10 +97,17 @@ CREATE TABLE device_reports (
     value_hash TEXT,
     report_hash TEXT NOT NULL,
     collector_version TEXT,
+    certification_assessment_json JSONB,
+    inspection_report_json JSONB,
+    assessment_version TEXT,
+    resale_grade TEXT,
+    overall_score NUMERIC(5, 2),
+    battery_wear_percent NUMERIC(5, 2),
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 CREATE INDEX idx_device_reports_device_id ON device_reports(device_id);
+CREATE INDEX idx_device_reports_resale_grade ON device_reports(resale_grade);
 CREATE INDEX idx_device_reports_identity_hash ON device_reports(identity_hash);
 
 -- ─── Certificates ─────────────────────────────────────────────────────────
@@ -303,6 +310,8 @@ CREATE TABLE scan_reports (
     public_report_token TEXT NOT NULL UNIQUE,
     scan_payload JSONB NOT NULL DEFAULT '{}',
     report_summary JSONB,
+    certification_assessment_json JSONB,
+    inspection_report_json JSONB,
     status TEXT NOT NULL DEFAULT 'completed',
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()

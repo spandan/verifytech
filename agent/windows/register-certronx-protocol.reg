@@ -1,6 +1,7 @@
 Windows Registry Editor Version 5.00
 
-; Register certronx:// custom protocol for Certronx Windows Agent deep links.
+; Optional fallback if certronx:// links still fail (HKLM, requires admin).
+; The agent also registers certronx:// under HKCU automatically on each launch.
 ; Update the path below to your installed DeviceCertAgent.exe location.
 
 [HKEY_CLASSES_ROOT\certronx]

@@ -57,6 +57,8 @@ public sealed class DeepCertificationOrchestrator
         assessment.Windows = new WindowsCertificationCollector().Collect(warnings);
         assessment.Network = new NetworkingCollector().Collect(warnings);
         assessment.Ports = new PortInventoryCollector().Collect(warnings);
+        if (functional is not null)
+            FunctionalTestFinalizer.Reconcile(functional, assessment.Ports);
         ApplyPortFunctionalStatus(assessment.Ports, functional);
 
         ApplyFunctionalToDisplay(assessment.Display, functional);
@@ -77,10 +79,6 @@ public sealed class DeepCertificationOrchestrator
     private static void ApplyPortFunctionalStatus(PortInventoryAssessment ports, FunctionalCertificationResults? f)
     {
         ports.PortCertificationStatus["usb"] = MapPortStatus(f?.UsbTest);
-        ports.PortCertificationStatus["hdmi"] = ports.HdmiCount.Value is > 0
-            ? "Detected but Not Tested"
-            : "Detected but Not Tested";
-        ports.PortCertificationStatus["display_output"] = MapPortStatus(f?.DisplayOutputTest);
         ports.PortCertificationStatus["audio_jack"] = MapPortStatus(f?.AudioJackTest);
         if (ports.AudioJack.Value == true && !ports.PortCertificationStatus.ContainsKey("audio_jack"))
             ports.PortCertificationStatus["audio_jack"] = "Detected but Not Tested";
@@ -90,7 +88,6 @@ public sealed class DeepCertificationOrchestrator
     {
         if (f is null) return;
         a.Ports.PortCertificationStatus["usb"] = MapPortStatus(f.UsbTest);
-        a.Ports.PortCertificationStatus["display_output"] = MapPortStatus(f.DisplayOutputTest);
         a.Ports.PortCertificationStatus["audio_jack"] = MapPortStatus(f.AudioJackTest);
     }
 

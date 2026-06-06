@@ -23,7 +23,7 @@ public static class CameraAccessHelper
         "2. Select Privacy & security → Camera",
         "3. Turn on Camera access",
         "4. Turn on Let desktop apps access your camera",
-        "5. Return to VerifyTech Agent and tap Retry camera",
+        "5. Return to Certronx Agent and tap Retry camera",
     ];
 
     public static bool TryOpenCameraSettings()

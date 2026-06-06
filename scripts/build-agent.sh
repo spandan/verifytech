@@ -56,4 +56,5 @@ fi
 
 echo ""
 echo "Built: agent/windows/publish/DeviceCertAgent.exe"
-echo "Set VERIFYTECH_SIGNING_THUMBPRINT for Authenticode signing."
+echo "Requires .NET 8 Desktop Runtime: https://dotnet.microsoft.com/download/dotnet/8.0"
+echo "Run: agent/windows/publish/Launch-CertronxAgent.cmd"

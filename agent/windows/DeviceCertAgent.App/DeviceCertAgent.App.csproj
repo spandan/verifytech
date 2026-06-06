@@ -10,9 +10,9 @@
     <AssemblyName>DeviceCertAgent</AssemblyName>
     <RootNamespace>DeviceCertAgent.App</RootNamespace>
     <Version>2.3.0</Version>
-    <Product>VerifyTech Agent</Product>
-    <Company>VerifyTech</Company>
-    <Description>VerifyTech Windows device certification agent</Description>
+    <Product>Certronx Agent</Product>
+    <Company>Certronx</Company>
+    <Description>Certronx Windows device certification agent</Description>
     <SupportedOSPlatformVersion>10.0.17763.0</SupportedOSPlatformVersion>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>
@@ -31,7 +31,10 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Update="Launch-VerifyTechAgent.cmd">
+    <None Include="..\register-certronx-protocol.reg" Link="register-certronx-protocol.reg">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="Launch-CertronxAgent.cmd">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Update="REQUIREMENTS.txt">

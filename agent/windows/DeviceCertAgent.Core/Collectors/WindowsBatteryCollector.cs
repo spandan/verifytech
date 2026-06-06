@@ -33,7 +33,7 @@ public sealed class WindowsBatteryCollector
             return new BatteryInfo
             {
                 Present = true,
-                HealthPercent = percent,
+                HealthPercent = null,
                 DesignCapacityMwh = null,
                 FullChargeCapacityMwh = null,
                 CycleCount = null,
@@ -96,7 +96,7 @@ public sealed class WindowsBatteryCollector
             return new BatteryInfo
             {
                 Present = true,
-                HealthPercent = remaining is > 0 and <= 100 ? remaining : null,
+                HealthPercent = null,
             };
         }
         catch
@@ -115,11 +115,11 @@ public sealed class WindowsBatteryCollector
         double? health = null;
         if (design is > 0 && full is > 0)
             health = Math.Round(Math.Min(100, full.Value * 100.0 / design.Value), 1);
-        else if (estimated is > 0 and <= 100)
-            health = estimated;
 
-        if (health is null)
-            warnings.Add($"battery: charge level unknown from {source}");
+        if (health is null && estimated is > 0 and <= 100)
+            warnings.Add($"battery: current charge {estimated}% (capacity health not available from {source})");
+        else if (health is null)
+            warnings.Add($"battery: capacity health unknown from {source}");
 
         return new BatteryInfo
         {

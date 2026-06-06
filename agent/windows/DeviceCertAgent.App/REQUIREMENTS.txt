@@ -1,5 +1,5 @@
-VerifyTech Agent — system requirements
-======================================
+Certronx Agent — system requirements
+====================================
 
 DeviceCertAgent.exe is a framework-dependent app (the .NET runtime is NOT bundled).
 
@@ -12,7 +12,7 @@ Download:
 Choose ".NET Desktop Runtime 8.x" → Windows → x64.
 
 Recommended launcher:
-  Launch-VerifyTechAgent.cmd
+  Launch-CertronxAgent.cmd
   (checks for the runtime and opens the download page if it is missing)
 
 If Windows shows a ".NET required" dialog when you double-click the exe,

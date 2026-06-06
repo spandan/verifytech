@@ -1,4 +1,5 @@
 using DeviceCertAgent.Core.Models;
+using DeviceCertAgent.Core.Models.V2;
 using DeviceCertAgent.Core.Utilities;
 
 namespace DeviceCertAgent.Core.Services;
@@ -51,6 +52,12 @@ public sealed class ScanQualityService
         else if (security.SecureBootEnabled == false)
             securityParts.Add("Secure Boot off");
 
+        var batteryText = result.Certification?.Battery.Condition.Value
+            ?? FormatBatterySummary(result.Tier2.Battery);
+        var storageHealthText = result.Certification?.Storage.FirstOrDefault()?.Condition.Value
+            ?? (healths.Count > 0 ? $"{healths.Average():0}%" : "N/A");
+        var securityText = securityParts.Count > 0 ? string.Join(" · ", securityParts) : "N/A";
+
         return new ScanSummary
         {
             DeviceName = $"{result.Tier1.Manufacturer} {result.Tier1.Model}".Trim(),
@@ -58,13 +65,11 @@ public sealed class ScanQualityService
             Cpu = result.Tier1.CpuModel,
             Ram = $"{result.Tier1.RamTotalGb:0}GB",
             Storage = storageDesc,
-            Battery = result.Certification?.Battery.Condition.Value
-                ?? FormatBatterySummary(result.Tier2.Battery),
-            StorageHealth = result.Certification?.Storage.FirstOrDefault()?.Condition.Value
-                ?? (healths.Count > 0 ? $"{healths.Average():0}%" : "N/A"),
+            Battery = batteryText,
+            StorageHealth = storageHealthText,
             Display = result.Tier2.Display.Resolution ?? "N/A",
             Graphics = result.Tier2.Graphics.GpuModel ?? "N/A",
-            Security = securityParts.Count > 0 ? string.Join(" · ", securityParts) : "N/A",
+            Security = securityText,
             CoreChecks = $"{functionalCount}/8 passed",
             CompletenessPercent = ComputeCompleteness(result),
             ScanType = scanType,
@@ -73,6 +78,15 @@ public sealed class ScanQualityService
                 .Distinct()
                 .Take(8)
                 .ToList(),
+            HealthChecks =
+            [
+                ReportCheckFormatting.Create("Battery", batteryText),
+                ReportCheckFormatting.Create("Storage", storageHealthText),
+                ReportCheckFormatting.Create("Display", result.Tier2.Display.Resolution),
+                ReportCheckFormatting.Create("Graphics", result.Tier2.Graphics.GpuModel),
+                ReportCheckFormatting.Create("Security", securityText),
+                ReportCheckFormatting.Create("Checks", $"{functionalCount}/8 passed"),
+            ],
         };
     }
 

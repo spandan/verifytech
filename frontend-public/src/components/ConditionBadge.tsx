@@ -24,7 +24,7 @@ export function ScoreDisplay({ score }: { score: number }) {
   return (
     <div className="score-display">
       <p className="score-display__value">{score}/100</p>
-      <p className="score-display__label">Certronx Score</p>
+      <p className="score-display__label">Overall score</p>
     </div>
   );
 }

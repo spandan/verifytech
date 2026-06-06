@@ -10,7 +10,7 @@ public sealed class BatteryIntelligenceCollector
         var assessment = new BatteryAssessment();
         var rows = WmiHelper.Query(
             "SELECT DesignCapacity, FullChargeCapacity, CycleCount, BatteryStatus, EstimatedChargeRemaining, " +
-            "Chemistry, DeviceName, ManufactureName FROM Win32_Battery");
+            "EstimatedRunTime, TimeToFullCharge, Chemistry, DeviceName, ManufactureName FROM Win32_Battery");
 
         if (rows.Count == 0)
             rows = WmiHelper.Query(
@@ -48,6 +48,15 @@ public sealed class BatteryIntelligenceCollector
                     "Win32_Battery",
                     "wmi_estimate",
                     "derived from charge %");
+
+            var estRuntime = SafeConvert.ToInt(row.GetValueOrDefault("EstimatedRunTime"));
+            if (estRuntime is > 0 and < 71582788)
+                assessment.EstimatedRuntimeMinutes = ConfidenceValue<int?>.Collected(
+                    estRuntime, "Win32_Battery", "wmi", ConfidenceLevel.Medium);
+
+            var timeToFull = SafeConvert.ToInt(row.GetValueOrDefault("TimeToFullCharge"));
+            if (timeToFull is > 0 and < 71582788)
+                assessment.CapacityHistoryNotes.Add($"Time to full charge: ~{timeToFull} min (at scan time)");
         }
 
         if (PowerStatusHelper.TryGetBattery(out var power))
@@ -58,7 +67,7 @@ public sealed class BatteryIntelligenceCollector
                     power.OnAcPower ? "ac_power" : "on_battery", "power_status_api", "GetSystemPowerStatus", ConfidenceLevel.Medium);
         }
 
-        TryPowerCfgReport(assessment, adminMode, warnings);
+        TryPowerCfgReport(assessment, warnings);
 
         if (assessment.DesignCapacityMwh.Value is > 0 && assessment.FullChargeCapacityMwh.Value is > 0)
         {
@@ -78,9 +87,8 @@ public sealed class BatteryIntelligenceCollector
         return assessment;
     }
 
-    private static void TryPowerCfgReport(BatteryAssessment a, bool admin, List<string> warnings)
+    private static void TryPowerCfgReport(BatteryAssessment a, List<string> warnings)
     {
-        if (!admin) return;
         var path = Path.Combine(Path.GetTempPath(), $"vt-battery-{Guid.NewGuid():N}.xml");
         try
         {

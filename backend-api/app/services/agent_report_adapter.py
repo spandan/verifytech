@@ -49,6 +49,23 @@ def agent_report_to_internal(raw: dict[str, Any]) -> dict[str, Any]:
 
     collected_at = ctx.get("collected_at") or datetime.utcnow().isoformat()
 
+    assessment = raw.get("certification_assessment") or {}
+    battery_v2 = assessment.get("battery") or {}
+
+    def _battery_health() -> Any:
+        health = battery.get("health_percent")
+        if health is not None:
+            return health
+        wear = battery_v2.get("wear_percent")
+        if isinstance(wear, dict):
+            wear = wear.get("value")
+        if wear is not None:
+            try:
+                return max(0.0, min(100.0, 100.0 - float(wear)))
+            except (TypeError, ValueError):
+                return None
+        return None
+
     internal = {
         "schema_version": "1.0.0",
         "tier1": {
@@ -74,7 +91,7 @@ def agent_report_to_internal(raw: dict[str, Any]) -> dict[str, Any]:
             "cpu_details": _cpu_details(cpu),
             "ram_details": memory.get("details"),
             "storage_details": storage_details,
-            "battery_health_percent": battery.get("health_percent"),
+            "battery_health_percent": _battery_health(),
             "battery_cycle_count": battery.get("cycle_count"),
             "display_resolution": display.get("resolution"),
             "display_status": "ok" if display.get("resolution") else None,

@@ -3,6 +3,7 @@ using System.Net.Http;
 using System.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using DeviceCertAgent.App;
 using DeviceCertAgent.App.Services;
 using DeviceCertAgent.Core.Models;
 using DeviceCertAgent.Core.Models.V2;
@@ -39,19 +40,34 @@ public partial class ShellViewModel : ObservableObject
     private readonly MockScanSessionFlowService? _mockFlow;
     private readonly AppLaunchOptions _launch;
     private CancellationTokenSource? _scanCts;
+    private bool _openReportWhenReady;
+    private bool _pairingMandatory;
+    private bool _linkedToAccount;
+
+    public bool IsAccountLinked => _pairedContext is not null;
+    public bool ShowUnlinkedAccountBanner =>
+        CurrentPage == AppPage.ResultPreview && !_linkedToAccount && _pairedContext is null;
+    public bool ShowAccountLinkedBanner =>
+        CurrentPage == AppPage.ResultPreview && _linkedToAccount;
+    public bool PairingMandatory => _pairingMandatory;
+    public bool ShowPairingBackButton => !_pairingMandatory;
+    public bool ShowCertificateLinkedToAccount => _linkedToAccount;
 
     public ShellViewModel(AgentRuntimeSettings settings, AppLaunchOptions launch)
     {
         _settings = settings;
         _launch = launch;
+        _pairingMandatory = launch.LaunchMode == AgentLaunchMode.Paired;
         if (settings.MockApi)
             _mockFlow = new MockScanSessionFlowService();
         else
             _sessionFlow = new ScanSessionFlowService(settings);
 
         StatusMessage = "Ready when you are.";
-        BrandSubtitle = "Trusted device certification for resale and refurbishment";
+        BrandSubtitle = "Device certification";
         FunctionalTests.ReachedCompleteStep += OnFunctionalTestsReachedComplete;
+        FunctionalTests.LeftCompleteStep += OnFunctionalTestsLeftComplete;
+        SubmitManualPairingCodeCommand.NotifyCanExecuteChanged();
     }
 
     [ObservableProperty] private AppPage _currentPage = AppPage.Welcome;
@@ -84,16 +100,69 @@ public partial class ShellViewModel : ObservableObject
     private Task? _prepareReportTask;
 
     [RelayCommand]
-    private void BeginCertification() => CurrentPage = AppPage.Disclosure;
-
-    [RelayCommand]
-    private void OpenManualPairing()
+    private void BeginStandaloneCertification()
     {
+        _pairingMandatory = false;
+        _linkedToAccount = false;
+        _isPairedFlow = false;
         HasError = false;
-        CurrentPage = AppPage.PairingManual;
+        CurrentPage = AppPage.Disclosure;
+        StatusMessage = "Standalone certification — your certificate will not be saved to a Certronx account.";
     }
 
     [RelayCommand]
+    private void OpenAccountPairing()
+    {
+        _pairingMandatory = true;
+        HasError = false;
+        ErrorMessage = "";
+        CurrentPage = AppPage.PairingManual;
+        StatusMessage = "Paste the pairing code from certronx.com. Connecting is required to save this scan to your account.";
+        NotifyPairingUi();
+    }
+
+    [RelayCommand]
+    private void BackFromPairing()
+    {
+        if (_pairingMandatory)
+            return;
+        HasError = false;
+        CurrentPage = AppPage.Welcome;
+    }
+
+    private void NotifyPairingUi()
+    {
+        OnPropertyChanged(nameof(PairingMandatory));
+        OnPropertyChanged(nameof(ShowPairingBackButton));
+    }
+
+    public void InitializeLaunchFlow()
+    {
+        if (_launch.LaunchMode == AgentLaunchMode.Paired)
+        {
+            if (!string.IsNullOrWhiteSpace(_launch.PairingCode))
+            {
+                ManualPairingCode = _launch.PairingCode;
+                BeginPairingIfRequested();
+                return;
+            }
+
+            CurrentPage = AppPage.PairingManual;
+            StatusMessage = "Enter the pairing code from certronx.com to save this scan to your account.";
+            return;
+        }
+
+        CurrentPage = AppPage.Welcome;
+        StatusMessage = "Choose how you want to certify this device.";
+    }
+
+    partial void OnCurrentPageChanged(AppPage value)
+    {
+        OnPropertyChanged(nameof(ShowUnlinkedAccountBanner));
+        OnPropertyChanged(nameof(ShowAccountLinkedBanner));
+    }
+
+    [RelayCommand(CanExecute = nameof(CanSubmitManualPairingCode))]
     private void SubmitManualPairingCode()
     {
         if (string.IsNullOrWhiteSpace(ManualPairingCode))
@@ -104,6 +173,11 @@ public partial class ShellViewModel : ObservableObject
 
         _ = BeginPairedFlowAsync(ManualPairingCode.Trim());
     }
+
+    private bool CanSubmitManualPairingCode() => !string.IsNullOrWhiteSpace(ManualPairingCode);
+
+    partial void OnManualPairingCodeChanged(string value) =>
+        SubmitManualPairingCodeCommand.NotifyCanExecuteChanged();
 
     public void BeginPairingIfRequested()
     {
@@ -116,6 +190,9 @@ public partial class ShellViewModel : ObservableObject
     {
         if (string.IsNullOrWhiteSpace(pairingCode))
             return;
+        _pairingMandatory = true;
+        ManualPairingCode = pairingCode;
+        NotifyPairingUi();
         _ = BeginPairedFlowAsync(pairingCode.Trim());
     }
 
@@ -124,7 +201,10 @@ public partial class ShellViewModel : ObservableObject
         if (_settings.MockApi)
         {
             ShowError("Paired scan is not available in mock mode.");
-            CurrentPage = AppPage.Welcome;
+            if (_pairingMandatory)
+                CurrentPage = AppPage.PairingManual;
+            else
+                CurrentPage = AppPage.Welcome;
             return;
         }
 
@@ -153,7 +233,11 @@ public partial class ShellViewModel : ObservableObject
                 Nonce = "",
             };
             LinkedAccountName = exchange.LinkedAccountName ?? "your Certronx account";
+            _linkedToAccount = true;
+            _pairingMandatory = false;
+            _isPairedFlow = true;
             StatusMessage = $"Linked to {LinkedAccountName}. Starting scan…";
+            NotifyPairingUi();
             await Task.Delay(500);
             await RunScanAsync(skipSessionStart: true);
         }
@@ -161,9 +245,13 @@ public partial class ShellViewModel : ObservableObject
         {
             _logger.Error($"Pairing failed (api={_settings.ApiBaseUrl})", ex);
             _isPairedFlow = false;
+            _linkedToAccount = false;
+            _pairingMandatory = true;
             ShowError(MapScanError(ex));
             ManualPairingCode = pairingCode;
             CurrentPage = AppPage.PairingManual;
+            StatusMessage = "Enter a valid pairing code from certronx.com to continue.";
+            NotifyPairingUi();
         }
     }
 
@@ -185,7 +273,7 @@ public partial class ShellViewModel : ObservableObject
     {
         var dialog = MessageBox.Show(
             "Enhanced scan uses administrator access for SMART storage health, firmware details, and deeper security checks.\n\n" +
-            "VerifyTech will restart with administrator privileges.",
+            "Certronx will restart with administrator privileges.",
             "Enhanced administrator scan",
             MessageBoxButton.YesNoCancel,
             MessageBoxImage.Question);
@@ -210,7 +298,7 @@ public partial class ShellViewModel : ObservableObject
 
             MessageBox.Show(
                 "Administrator access was not granted. You can run a basic scan instead.",
-                "VerifyTech Agent",
+                AppBranding.AppName,
                 MessageBoxButton.OK,
                 MessageBoxImage.Information);
             return;
@@ -229,7 +317,7 @@ public partial class ShellViewModel : ObservableObject
         {
             MessageBox.Show(
                 "Enhanced scan requires administrator mode. Please choose Enhanced scan again.",
-                "VerifyTech Agent",
+                AppBranding.AppName,
                 MessageBoxButton.OK,
                 MessageBoxImage.Warning);
             CurrentPage = AppPage.Permission;
@@ -243,6 +331,13 @@ public partial class ShellViewModel : ObservableObject
 
     private async Task RunScanAsync(bool skipSessionStart = false)
     {
+        if (_pairingMandatory || (_linkedToAccount && _pairedContext is null))
+        {
+            CurrentPage = AppPage.PairingManual;
+            StatusMessage = "Connect to Certronx with your pairing code before scanning.";
+            return;
+        }
+
         HasError = false;
         ErrorMessage = "";
         CurrentPage = AppPage.ScanProgress;
@@ -264,7 +359,7 @@ public partial class ShellViewModel : ObservableObject
             _scanStartedAt = DateTime.UtcNow;
             if (!skipSessionStart)
             {
-                StatusMessage = "Connecting securely to VerifyTech…";
+                StatusMessage = "Connecting securely to Certronx…";
 
                 if (_settings.MockApi)
                     _activeSession = await _mockFlow!.StartSessionAsync(_scanCts.Token);
@@ -292,7 +387,7 @@ public partial class ShellViewModel : ObservableObject
             ResetReportPreparation();
             CurrentPage = AppPage.FunctionalTests;
             FunctionalTests.CurrentStep = FunctionalTestStep.Hub;
-            StatusMessage = "Complete interactive checks, or skip to continue.";
+            StatusMessage = "Run the interactive checks, or skip optional checks and start with display.";
         }
         catch (Exception ex)
         {
@@ -302,13 +397,19 @@ public partial class ShellViewModel : ObservableObject
         }
     }
 
-    [RelayCommand]
-    private void ContinueToReport()
-    {
-        FunctionalTests.CurrentStep = FunctionalTestStep.Complete;
-        StartPrepareReportIfNeeded();
-    }
+    private void OnFunctionalTestsReachedComplete() => StartPrepareReportIfNeeded();
 
+    private void OnFunctionalTestsLeftComplete() => ResetReportPreparation();
+
+    partial void OnIsReportReadyChanged(bool value)
+    {
+        NotifyReportCommands();
+        if (value && _openReportWhenReady)
+        {
+            _openReportWhenReady = false;
+            ViewInspectionReport();
+        }
+    }
     [RelayCommand(CanExecute = nameof(CanViewInspectionReport))]
     private void ViewInspectionReport()
     {
@@ -316,6 +417,9 @@ public partial class ShellViewModel : ObservableObject
             return;
 
         HasError = false;
+        OnPropertyChanged(nameof(ShowCertificateLinkedToAccount));
+        OnPropertyChanged(nameof(ShowUnlinkedAccountBanner));
+        OnPropertyChanged(nameof(ShowAccountLinkedBanner));
         CurrentPage = AppPage.ResultPreview;
         StatusMessage = "Review your report before submitting.";
     }
@@ -327,13 +431,6 @@ public partial class ShellViewModel : ObservableObject
 
     private bool CanRetryReportPreparation() => !IsPreparingReport && !IsReportReady;
 
-    partial void OnIsReportReadyChanged(bool value)
-    {
-        NotifyReportCommands();
-        if (value && _isPairedFlow && _pairedContext is not null)
-            _ = SubmitCertification();
-    }
-
     partial void OnIsPreparingReportChanged(bool value) => NotifyReportCommands();
 
     private void NotifyReportCommands()
@@ -341,8 +438,6 @@ public partial class ShellViewModel : ObservableObject
         ViewInspectionReportCommand.NotifyCanExecuteChanged();
         RetryReportPreparationCommand.NotifyCanExecuteChanged();
     }
-
-    private void OnFunctionalTestsReachedComplete() => StartPrepareReportIfNeeded();
 
     private void ResetReportPreparation()
     {
@@ -448,7 +543,11 @@ public partial class ShellViewModel : ObservableObject
     [RelayCommand]
     private async Task SubmitCertification()
     {
-        if (_collectionResult is null || _activeSession is null) return;
+        if (_collectionResult is null || _activeSession is null)
+        {
+            ShowError("Scan session is not ready. Run the scan again from the start.");
+            return;
+        }
 
         if (!_quality.MeetsTier1Minimum(_collectionResult))
         {
@@ -506,8 +605,11 @@ public partial class ShellViewModel : ObservableObject
             }
 
             _certResult = result;
-            StatusMessage = "Certification complete";
+            StatusMessage = _linkedToAccount
+                ? "Certification complete — saved to your Certronx account."
+                : "Certification complete — share your certificate code and report link.";
             CurrentPage = AppPage.CertificateSuccess;
+            OnPropertyChanged(nameof(ShowCertificateLinkedToAccount));
         }
         catch (Exception ex)
         {
@@ -548,7 +650,7 @@ public partial class ShellViewModel : ObservableObject
     private void ClearLocalCache()
     {
         _cache.ClearCache();
-        MessageBox.Show("Local scan cache removed.", "VerifyTech Agent", MessageBoxButton.OK, MessageBoxImage.Information);
+        MessageBox.Show("Local scan cache removed.", AppBranding.AppName, MessageBoxButton.OK, MessageBoxImage.Information);
     }
 
     [RelayCommand]
@@ -560,7 +662,12 @@ public partial class ShellViewModel : ObservableObject
     [RelayCommand]
     private void BackToWelcome()
     {
+        if (_pairingMandatory)
+            return;
         HasError = false;
+        _linkedToAccount = false;
+        _isPairedFlow = false;
+        _pairedContext = null;
         CurrentPage = AppPage.Welcome;
     }
 
@@ -568,14 +675,14 @@ public partial class ShellViewModel : ObservableObject
     {
         HasError = true;
         ErrorMessage = message;
-        MessageBox.Show(message, "VerifyTech Agent", MessageBoxButton.OK, MessageBoxImage.Warning);
+        MessageBox.Show(message, AppBranding.AppName, MessageBoxButton.OK, MessageBoxImage.Warning);
     }
 
     private string MapScanError(Exception ex) => ex switch
     {
         InvalidOperationException ioe => ioe.Message,
         HttpRequestException hre =>
-            $"Unable to reach VerifyTech. Check your internet connection and try again.\n\nServer: {_settings.ApiBaseUrl}\n\nDetails: {hre.Message}",
+            $"Unable to reach Certronx. Check your internet connection and try again.\n\nServer: {_settings.ApiBaseUrl}\n\nDetails: {hre.Message}",
         UnauthorizedAccessException => "Permission was denied for part of this scan. You can retry with a standard scan.",
         _ => $"Something went wrong during the scan. Please try again.\n\nServer: {_settings.ApiBaseUrl}\n\nDetails: {ex.Message}",
     };

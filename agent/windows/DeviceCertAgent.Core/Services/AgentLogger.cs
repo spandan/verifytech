@@ -21,8 +21,19 @@ public sealed class AgentLogger
 
     public void Info(string message) => Write("INFO", message);
     public void Warn(string message) => Write("WARN", message);
-    public void Error(string message, Exception? ex = null) =>
-        Write("ERROR", ex is null ? message : $"{message} | {ex.GetType().Name}: {ex.Message}");
+    public void Error(string message, Exception? ex = null)
+    {
+        var detail = ex is null ? message : $"{message} | {FormatException(ex)}";
+        Write("ERROR", detail);
+    }
+
+    private static string FormatException(Exception ex)
+    {
+        var parts = new List<string> { $"{ex.GetType().Name}: {ex.Message}" };
+        for (var inner = ex.InnerException; inner is not null; inner = inner.InnerException)
+            parts.Add($"Inner {inner.GetType().Name}: {inner.Message}");
+        return string.Join(" | ", parts);
+    }
 
     private void Write(string level, string message)
     {

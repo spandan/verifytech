@@ -243,6 +243,9 @@ public sealed class CertificationSummaryReport
     public string RefurbisherNotes { get; set; } = "";
     public string RecommendedResaleGrade { get; set; } = "";
     public List<string> Warnings { get; set; } = [];
+    public List<ReportCheckItem> HardwareChecks { get; set; } = [];
+    public List<ReportCheckItem> SecurityChecks { get; set; } = [];
+    public List<ReportCheckItem> FunctionalChecks { get; set; } = [];
 }
 
 /// <summary>User-verified functional tests (filled by WPF UI).</summary>

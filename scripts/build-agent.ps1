@@ -101,7 +101,7 @@ $exeMb = if (Test-Path $exePath) { [math]::Round((Get-Item $exePath).Length / 1M
 Write-Host ''
 Write-Host "Built: agent/windows/publish/DeviceCertAgent.exe ($exeMb MB, framework-dependent)"
 Write-Host 'Requires .NET 8 Desktop Runtime: https://dotnet.microsoft.com/download/dotnet/8.0'
-Write-Host 'Use Launch-VerifyTechAgent.cmd to check runtime before starting.'
+Write-Host 'Use Launch-CertronxAgent.cmd to check runtime before starting.'
 if ($exeMb -gt 50) {
     Write-Host "Warning: executable is above 50 MB ($exeMb MB)." -ForegroundColor Yellow
 }

@@ -47,10 +47,14 @@ function parseNumericScore(value: unknown): number | null {
   if (value == null) return null;
   const text = String(value).trim();
   const slashMatch = text.match(/(\d{1,3})\s*\/\s*100/);
-  if (slashMatch) return clampScore(Number(slashMatch[1]));
+  if (slashMatch) {
+    const score = Number(slashMatch[1]);
+    return score > 0 ? clampScore(score) : null;
+  }
   const numMatch = text.match(/\d{1,3}/);
   if (!numMatch) return null;
-  return clampScore(Number(numMatch[0]));
+  const score = Number(numMatch[0]);
+  return score > 0 ? clampScore(score) : null;
 }
 
 function clampScore(score: number): number {
@@ -141,6 +145,10 @@ function inferStorageType(report?: InspectionReport | null): string {
 export function extractOverallScore(cert: CertificatePublic): number {
   const report = cert.inspection_report;
   if (report) {
+    const grade = report.summary?.certification_grade ?? report.certification_grade;
+    const letterScore = letterGradeToScore(typeof grade === "string" ? grade : undefined);
+    if (letterScore != null) return letterScore;
+
     const advanced = report.advanced as
       | { performance?: { benchmark?: Array<{ label?: string; value?: string }> } }
       | undefined;
@@ -148,18 +156,15 @@ export function extractOverallScore(cert: CertificatePublic): number {
     const benchmarkScore = findAdvancedField(advanced?.performance?.benchmark, "overall_score");
     const parsedBenchmark = parseNumericScore(benchmarkScore);
     if (parsedBenchmark != null) return parsedBenchmark;
-
-    const grade = report.summary?.certification_grade ?? report.certification_grade;
-    const numericGrade = parseNumericScore(grade);
-    if (numericGrade != null) return numericGrade;
-
-    const letterScore = letterGradeToScore(typeof grade === "string" ? grade : undefined);
-    if (letterScore != null) return letterScore;
   }
 
   const healthScores: number[] = [];
-  if (cert.battery_health_percent != null) healthScores.push(cert.battery_health_percent);
-  if (cert.storage_health_percent != null) healthScores.push(cert.storage_health_percent);
+  if (cert.battery_health_percent != null && cert.battery_health_percent > 0) {
+    healthScores.push(cert.battery_health_percent);
+  }
+  if (cert.storage_health_percent != null && cert.storage_health_percent > 0) {
+    healthScores.push(cert.storage_health_percent);
+  }
   if (healthScores.length) {
     return clampScore(healthScores.reduce((sum, value) => sum + value, 0) / healthScores.length);
   }

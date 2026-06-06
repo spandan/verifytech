@@ -27,7 +27,7 @@ from app.services.account_service import AccountService
 from app.services.evidence_storage_service import EvidenceStorageService
 from app.services.inspection_report_service import InspectionReportService
 from app.services.report_service import ReportService
-from app.services.scan_report_service import ScanReportService
+from app.services.scan_report_service import ScanReportService, extract_assessment_metadata
 from app.services.scan_pairing_service import ScanPairingService
 
 
@@ -238,6 +238,13 @@ class ScanSessionService:
             )
 
         inspection = self._inspection.build(body.scan_data, evidence_manifest)
+        assessment = body.scan_data.get("certification_assessment") or {}
+        summary_layer = inspection.get("summary") if isinstance(inspection, dict) else {}
+        condition_grade = (
+            summary_layer.get("certification_grade")
+            if isinstance(summary_layer, dict)
+            else None
+        )
         bundle = body.scan_data.get("evidence_bundle") or {}
         provenance = bundle.get("build_provenance") if isinstance(bundle, dict) else None
         cert = db.get_certificate_by_code(result.certificate_code)
@@ -247,8 +254,25 @@ class ScanSessionService:
             payload["agent_provenance"] = provenance
             payload["evidence_manifest"] = evidence_manifest
             db.client.table("certificates").update(
-                {"public_payload_json": payload, "condition_grade": inspection.get("certification_grade")}
+                {
+                    "public_payload_json": payload,
+                    "condition_grade": condition_grade,
+                }
             ).eq("id", cert.id).execute()
+
+        meta = extract_assessment_metadata(body.scan_data, inspection)
+        if result.report_id:
+            db.update_device_report(
+                result.report_id,
+                {
+                    "certification_assessment_json": assessment or None,
+                    "inspection_report_json": inspection,
+                    "assessment_version": meta.get("assessment_version"),
+                    "resale_grade": meta.get("resale_grade"),
+                    "overall_score": meta.get("overall_score"),
+                    "battery_wear_percent": meta.get("battery_wear_percent"),
+                },
+            )
 
         serial_hash, serial_last4 = self._scan_reports.extract_serial_fields(body.scan_data)
         if result.device_id and (serial_hash or serial_last4):
@@ -271,6 +295,8 @@ class ScanSessionService:
                 inspection,
                 cert.status if cert else "active",
             ),
+            certification_assessment=assessment or None,
+            inspection_report=inspection,
             user_id=session.user_id,
         )
 

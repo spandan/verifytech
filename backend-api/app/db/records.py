@@ -136,6 +136,12 @@ class DeviceReport:
     value_hash: str | None = None
     report_hash: str = ""
     collector_version: str | None = None
+    certification_assessment_json: dict[str, Any] | None = None
+    inspection_report_json: dict[str, Any] | None = None
+    assessment_version: str | None = None
+    resale_grade: str | None = None
+    overall_score: float | None = None
+    battery_wear_percent: float | None = None
     created_at: datetime | None = None
 
     @classmethod
@@ -155,6 +161,12 @@ class DeviceReport:
             value_hash=row.get("value_hash"),
             report_hash=row.get("report_hash", ""),
             collector_version=row.get("collector_version"),
+            certification_assessment_json=row.get("certification_assessment_json"),
+            inspection_report_json=row.get("inspection_report_json"),
+            assessment_version=row.get("assessment_version"),
+            resale_grade=row.get("resale_grade"),
+            overall_score=_parse_float(row.get("overall_score")),
+            battery_wear_percent=_parse_float(row.get("battery_wear_percent")),
             created_at=_parse_dt(row.get("created_at")),
         )
 
@@ -375,6 +387,8 @@ class ScanReport:
     public_report_token: str = ""
     scan_payload: dict[str, Any] = field(default_factory=dict)
     report_summary: dict[str, Any] | None = None
+    certification_assessment_json: dict[str, Any] | None = None
+    inspection_report_json: dict[str, Any] | None = None
     status: str = "completed"
     created_at: datetime | None = None
     updated_at: datetime | None = None
@@ -391,6 +405,8 @@ class ScanReport:
             public_report_token=row.get("public_report_token", ""),
             scan_payload=row.get("scan_payload") or {},
             report_summary=row.get("report_summary"),
+            certification_assessment_json=row.get("certification_assessment_json"),
+            inspection_report_json=row.get("inspection_report_json"),
             status=row.get("status", "completed"),
             created_at=_parse_dt(row.get("created_at")),
             updated_at=_parse_dt(row.get("updated_at")),

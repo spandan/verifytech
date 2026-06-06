@@ -145,6 +145,7 @@ public sealed class SecureEndpointResolver
             if (TryParseDeepLink(arg, out var pairingCode))
             {
                 options.PairingCode = pairingCode;
+                options.LaunchMode = AgentLaunchMode.Paired;
                 continue;
             }
 
@@ -159,11 +160,16 @@ public sealed class SecureEndpointResolver
                 case "--enhanced-scan":
                     options.EnhancedScanOnStartup = true;
                     break;
+                case "--paired-required":
+                    options.LaunchMode = AgentLaunchMode.Paired;
+                    break;
                 case "--pairing-code" when i + 1 < args.Length:
                     options.PairingCode = args[++i].Trim();
+                    options.LaunchMode = AgentLaunchMode.Paired;
                     break;
             }
         }
+
         return options;
     }
 

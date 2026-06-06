@@ -2,7 +2,7 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:conv="clr-namespace:DeviceCertAgent.App.Converters"
-        Title="VerifyTech Agent"
+        Title="Certronx Agent"
         Width="960" Height="720" MinWidth="840" MinHeight="640"
         Background="{StaticResource BackgroundBrush}"
         WindowStartupLocation="CenterScreen">
@@ -12,24 +12,64 @@
     <conv:StepStatusBrushConverter x:Key="StepBrush"/>
     <conv:BoolVisConverter x:Key="BoolVis"/>
     <conv:FunctionalStepVisibilityConverter x:Key="FuncStepVis"/>
+    <conv:InverseBoolConverter x:Key="InverseBool"/>
+    <conv:StringNotEmptyVisibilityConverter x:Key="StringNotEmptyVis"/>
+
+    <DataTemplate x:Key="ReportCheckRowTemplate">
+      <Border Background="{StaticResource SurfaceMutedBrush}" BorderBrush="{StaticResource BorderBrush}"
+              BorderThickness="1" CornerRadius="8" Padding="10,8" Margin="0,0,0,6">
+        <Grid>
+          <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="92"/>
+            <ColumnDefinition Width="*"/>
+          </Grid.ColumnDefinitions>
+          <TextBlock Grid.Column="0" Text="{Binding Label}" Style="{StaticResource ReportCheckLabel}" VerticalAlignment="Top"/>
+          <StackPanel Grid.Column="1">
+            <TextBlock Text="{Binding Headline}">
+              <TextBlock.Style>
+                <Style TargetType="TextBlock" BasedOn="{StaticResource ReportCheckHeadline}">
+                  <Style.Triggers>
+                    <DataTrigger Binding="{Binding Tone}" Value="good">
+                      <Setter Property="Foreground" Value="{StaticResource SuccessBrush}"/>
+                    </DataTrigger>
+                    <DataTrigger Binding="{Binding Tone}" Value="bad">
+                      <Setter Property="Foreground" Value="{StaticResource ErrorBrush}"/>
+                    </DataTrigger>
+                    <DataTrigger Binding="{Binding Tone}" Value="warn">
+                      <Setter Property="Foreground" Value="{StaticResource WarningBrush}"/>
+                    </DataTrigger>
+                    <DataTrigger Binding="{Binding Tone}" Value="muted">
+                      <Setter Property="Foreground" Value="{StaticResource TextSecondaryBrush}"/>
+                      <Setter Property="FontWeight" Value="Medium"/>
+                    </DataTrigger>
+                  </Style.Triggers>
+                </Style>
+              </TextBlock.Style>
+            </TextBlock>
+            <TextBlock Text="{Binding Detail}" Style="{StaticResource ReportCheckDetail}"
+                       Visibility="{Binding Detail, Converter={StaticResource StringNotEmptyVis}}"/>
+          </StackPanel>
+        </Grid>
+      </Border>
+    </DataTemplate>
   </Window.Resources>
 
-  <Grid Margin="28">
+  <Grid Margin="20">
     <Grid.RowDefinitions>
       <RowDefinition Height="Auto"/>
       <RowDefinition Height="*"/>
       <RowDefinition Height="Auto"/>
     </Grid.RowDefinitions>
 
-    <StackPanel Grid.Row="0" Margin="0,0,0,24">
+    <StackPanel Grid.Row="0" Margin="0,0,0,16">
       <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-        <Border Width="44" Height="44" CornerRadius="10" Background="{StaticResource AccentBrush}" Margin="0,0,14,0">
-          <TextBlock Text="VT" Foreground="White" FontWeight="Bold" FontSize="16"
+        <Border Width="36" Height="36" CornerRadius="8" Background="{StaticResource AccentBrush}" Margin="0,0,12,0">
+          <TextBlock Text="CX" Foreground="White" FontWeight="Bold" FontSize="13"
                      HorizontalAlignment="Center" VerticalAlignment="Center"/>
         </Border>
-        <StackPanel>
-          <TextBlock Text="VerifyTech Agent" FontSize="20" FontWeight="SemiBold" Foreground="{StaticResource TextPrimaryBrush}"/>
-          <TextBlock Text="{Binding BrandSubtitle}" FontSize="13" Foreground="{StaticResource TextSecondaryBrush}"/>
+        <StackPanel VerticalAlignment="Center">
+          <TextBlock Text="Certronx" FontSize="18" FontWeight="SemiBold" Foreground="{StaticResource TextPrimaryBrush}"/>
+          <TextBlock Text="Device certification" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,2,0,0"/>
         </StackPanel>
       </StackPanel>
     </StackPanel>
@@ -41,7 +81,7 @@
         <StackPanel Visibility="{Binding CurrentPage, Converter={StaticResource PageVis}, ConverterParameter=Welcome}">
           <TextBlock Text="Certify this device" Style="{StaticResource PageTitle}" Margin="0,0,0,10"/>
           <TextBlock Style="{StaticResource BodyText}" Margin="0,0,0,28"
-                     Text="Run a secure hardware diagnostic and receive a trusted certificate backed by VerifyTech — ideal for resale, trade-in, and refurbishment."/>
+                     Text="Run a secure hardware diagnostic and receive a trusted certificate backed by Certronx — ideal for resale, trade-in, and refurbishment."/>
           <Border Style="{StaticResource HeroCardBorder}" Margin="0,0,0,24">
             <StackPanel>
               <TextBlock Text="What you get" FontWeight="SemiBold" FontSize="15" Foreground="{StaticResource TextPrimaryBrush}"/>
@@ -51,24 +91,35 @@
               <TextBlock Style="{StaticResource BodyText}" Margin="0,8,0,0" Foreground="{StaticResource AccentBrush}"
                          Text="No personal files, photos, or browsing data are collected."/>
               <TextBlock Style="{StaticResource BodyText}" Margin="0,12,0,0" TextWrapping="Wrap"
-                         Text="Requires .NET 8 Desktop Runtime (x64). If the app won't start, install from dotnet.microsoft.com/download/dotnet/8.0 or run Launch-VerifyTechAgent.cmd."/>
+                         Text="Requires .NET 8 Desktop Runtime (x64). If the app won't start, install from dotnet.microsoft.com/download/dotnet/8.0 or run Launch-CertronxAgent.cmd."/>
             </StackPanel>
           </Border>
           <StackPanel Orientation="Horizontal">
-            <Button Content="Start certification" Style="{StaticResource AccentButton}" Command="{Binding BeginCertificationCommand}" Margin="0,0,10,0"/>
-            <Button Content="Enter pairing code" Style="{StaticResource SecondaryButton}" Command="{Binding OpenManualPairingCommand}"/>
+            <Button Content="Continue without account" Style="{StaticResource SecondaryButton}"
+                    Command="{Binding BeginStandaloneCertificationCommand}" Margin="0,0,10,0"/>
+            <Button Content="I have a code from certronx.com" Style="{StaticResource SecondaryButton}"
+                    Command="{Binding OpenAccountPairingCommand}"/>
           </StackPanel>
+          <TextBlock Style="{StaticResource BodyText}" Margin="0,14,0,0" TextWrapping="Wrap"
+                     Text="Without a pairing code, you still receive a certificate and report link — it just won't appear in your Certronx account dashboard."/>
         </StackPanel>
 
-        <!-- Pairing manual -->
+        <!-- Pairing manual (account-linked path) -->
         <StackPanel Visibility="{Binding CurrentPage, Converter={StaticResource PageVis}, ConverterParameter=PairingManual}">
-          <TextBlock Text="Enter pairing code" Style="{StaticResource PageTitle}" Margin="0,0,0,12"/>
-          <TextBlock Style="{StaticResource BodyText}" Margin="0,0,0,16"
-                     Text="Paste the code from certronx.com if the browser did not open this app automatically. Codes expire in 2 minutes."/>
+          <TextBlock Text="Connect to Certronx" Style="{StaticResource PageTitle}" Margin="0,0,0,8"/>
+          <TextBlock Style="{StaticResource BodyText}" Margin="0,0,0,16" TextWrapping="Wrap"
+                     Text="{Binding StatusMessage}"/>
+          <TextBlock Style="{StaticResource BodyText}" Margin="0,0,0,12" TextWrapping="Wrap"
+                     Visibility="{Binding PairingMandatory, Converter={StaticResource BoolVis}}"
+                     Foreground="{StaticResource AccentBrush}"
+                     Text="A pairing code is required to save this scan to your account. Get a fresh code from certronx.com/download if yours expired."/>
           <TextBox Text="{Binding ManualPairingCode, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,12" Padding="10" FontFamily="Consolas"/>
           <StackPanel Orientation="Horizontal">
-            <Button Content="Connect" Style="{StaticResource AccentButton}" Command="{Binding SubmitManualPairingCodeCommand}" Margin="0,0,10,0"/>
-            <Button Content="Back" Style="{StaticResource SecondaryButton}" Command="{Binding BackToWelcomeCommand}"/>
+            <Button Content="Connect" Style="{StaticResource PrimaryButton}" Command="{Binding SubmitManualPairingCodeCommand}" Margin="0,0,10,0"/>
+            <Button Content="Back" Style="{StaticResource SecondaryButton}" Command="{Binding BackFromPairingCommand}"
+                    Visibility="{Binding ShowPairingBackButton, Converter={StaticResource BoolVis}}"/>
+            <Button Content="Exit" Style="{StaticResource SecondaryButton}" Command="{Binding CancelCommand}"
+                    Visibility="{Binding PairingMandatory, Converter={StaticResource BoolVis}}"/>
           </StackPanel>
           <TextBlock Text="{Binding ErrorMessage}" Foreground="{StaticResource ErrorBrush}" Margin="0,12,0,0"
                      Visibility="{Binding HasError, Converter={StaticResource BoolVis}}"/>
@@ -104,24 +155,42 @@
           <TextBlock Text="Choose scan level" Style="{StaticResource PageTitle}" Margin="0,0,0,12"/>
           <TextBlock Style="{StaticResource BodyText}" Margin="0,0,0,20"
                      Text="A basic scan works without administrator rights. Enhanced scan adds deeper storage and security diagnostics."/>
-          <UniformGrid Columns="2" Margin="0,0,0,16">
-            <Border Style="{StaticResource CardBorder}" Margin="0,0,10,0">
-              <StackPanel>
-                <TextBlock Text="Basic scan" FontWeight="SemiBold" FontSize="16" Foreground="{StaticResource TextPrimaryBrush}"/>
-                <TextBlock Style="{StaticResource BodyText}" Margin="0,10,0,16"
+          <Grid Margin="0,0,0,16">
+            <Grid.ColumnDefinitions>
+              <ColumnDefinition Width="*"/>
+              <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+            <Border Grid.Column="0" Style="{StaticResource CardBorder}" Margin="0,0,6,0">
+              <Grid>
+                <Grid.RowDefinitions>
+                  <RowDefinition Height="Auto"/>
+                  <RowDefinition Height="Auto"/>
+                  <RowDefinition Height="*"/>
+                  <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+                <TextBlock Grid.Row="0" Text="Basic scan" FontWeight="SemiBold" FontSize="16" Foreground="{StaticResource TextPrimaryBrush}"/>
+                <TextBlock Grid.Row="1" Style="{StaticResource BodyText}" Margin="0,10,0,0"
                            Text="Recommended for most users. No admin rights required."/>
-                <Button Content="Run basic scan" Style="{StaticResource PrimaryButton}" Command="{Binding ChooseBasicScanCommand}"/>
-              </StackPanel>
+                <Button Grid.Row="3" Content="Run basic scan" Style="{StaticResource SecondaryButton}"
+                        Command="{Binding ChooseBasicScanCommand}" HorizontalAlignment="Left" Margin="0,16,0,0"/>
+              </Grid>
             </Border>
-            <Border Style="{StaticResource CardBorder}" Margin="10,0,0,0">
-              <StackPanel>
-                <TextBlock Text="Enhanced scan" FontWeight="SemiBold" FontSize="16" Foreground="{StaticResource TextPrimaryBrush}"/>
-                <TextBlock Style="{StaticResource BodyText}" Margin="0,10,0,16"
+            <Border Grid.Column="1" Style="{StaticResource CardBorder}" Margin="6,0,0,0">
+              <Grid>
+                <Grid.RowDefinitions>
+                  <RowDefinition Height="Auto"/>
+                  <RowDefinition Height="Auto"/>
+                  <RowDefinition Height="*"/>
+                  <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+                <TextBlock Grid.Row="0" Text="Enhanced scan" FontWeight="SemiBold" FontSize="16" Foreground="{StaticResource TextPrimaryBrush}"/>
+                <TextBlock Grid.Row="1" Style="{StaticResource BodyText}" Margin="0,10,0,0"
                            Text="SMART storage health, deeper firmware and security checks. May request admin access."/>
-                <Button Content="Run enhanced scan" Style="{StaticResource AccentButton}" Command="{Binding ChooseEnhancedScanCommand}"/>
-              </StackPanel>
+                <Button Grid.Row="3" Content="Run enhanced scan" Style="{StaticResource SecondaryButton}"
+                        Command="{Binding ChooseEnhancedScanCommand}" HorizontalAlignment="Left" Margin="0,16,0,0"/>
+              </Grid>
             </Border>
-          </UniformGrid>
+          </Grid>
           <TextBlock Text="{Binding ErrorMessage}" Foreground="{StaticResource ErrorBrush}" Visibility="{Binding HasError, Converter={StaticResource BoolVis}}"/>
         </StackPanel>
 
@@ -158,163 +227,325 @@
         <!-- Functional tests (visibility binds to shell CurrentPage — do not set DataContext on this panel) -->
         <StackPanel Visibility="{Binding CurrentPage, Converter={StaticResource PageVis}, ConverterParameter=FunctionalTests}">
           <StackPanel DataContext="{Binding FunctionalTests}">
-          <TextBlock Text="Functional certification" Style="{StaticResource PageTitle}" Margin="0,0,0,8"/>
-          <TextBlock Style="{StaticResource BodyText}" Text="{Binding StatusMessage}" Margin="0,0,0,16"/>
+          <TextBlock Text="Interactive checks" Style="{StaticResource SectionTitle}" Margin="0,0,0,12"
+                     Visibility="{Binding CurrentStep, Converter={StaticResource FuncStepVis}, ConverterParameter=Hub}"/>
 
-          <Border Style="{StaticResource CardBorder}" MinHeight="320">
+          <Border Style="{StaticResource CardBorder}" MinHeight="200">
             <Grid>
+              <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+              </Grid.RowDefinitions>
+
+              <Border Grid.Row="0" Style="{StaticResource FuncTestToolbar}"
+                      Visibility="{Binding ShowStepToolbar, Converter={StaticResource BoolVis}}">
+                <Grid>
+                  <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                  </Grid.ColumnDefinitions>
+                  <Button Grid.Column="0" Content="Back" Style="{StaticResource SecondaryButton}"
+                          Command="{Binding GoBackCommand}" Margin="0,0,8,0"
+                          Visibility="{Binding CanGoBack, Converter={StaticResource BoolVis}}"/>
+                  <TextBlock Grid.Column="1" Text="{Binding CurrentStepTitle}" Style="{StaticResource SectionTitle}"
+                             VerticalAlignment="Center"/>
+                  <Button Grid.Column="2" Content="Skip" Style="{StaticResource SecondaryButton}"
+                          Command="{Binding SkipCurrentStepCommand}"
+                          Visibility="{Binding ShowSkipOnToolbar, Converter={StaticResource BoolVis}}"
+                          IsEnabled="{Binding CanSkipCurrentStep}"
+                          ToolTip="{Binding CurrentSkipToolTip}"
+                          ToolTipService.ShowOnDisabled="True"/>
+                </Grid>
+              </Border>
+
+              <Grid Grid.Row="1">
               <StackPanel Visibility="{Binding CurrentStep, Converter={StaticResource FuncStepVis}, ConverterParameter=Hub}">
             <Border Style="{StaticResource CardBorder}" Margin="0,0,0,16">
               <TextBlock Style="{StaticResource BodyText}" TextWrapping="Wrap"
-                         Text="Verify display, audio, camera, keyboard, touchpad, and USB. Skipped tests stay not verified — they are never reported as passed."/>
+                         Text="Display and keyboard are required for certification. Speakers, microphone, camera, touchpad, and USB are optional — use Skip on those steps if needed. Skipped checks are never reported as passed."/>
             </Border>
             <StackPanel Orientation="Horizontal">
-              <Button Content="Start tests" Style="{StaticResource AccentButton}" Command="{Binding StartTestsCommand}" Margin="0,0,8,0"/>
-              <Button Content="Skip all" Style="{StaticResource SecondaryButton}" Command="{Binding SkipAllCommand}" Margin="0,0,8,0"/>
-              <Button Content="Continue to report" Style="{StaticResource PrimaryButton}"
-                      Command="{Binding DataContext.ContinueToReportCommand, RelativeSource={RelativeSource AncestorType=Window}}"/>
+              <Button Content="Start tests" Style="{StaticResource SecondaryButton}" Command="{Binding StartTestsCommand}" Margin="0,0,8,0"/>
+              <Button Content="Skip optional" Style="{StaticResource SecondaryButton}" Command="{Binding SkipOptionalChecksCommand}"
+                      ToolTip="{Binding HubSkipToolTip}"/>
             </StackPanel>
           </StackPanel>
 
           <StackPanel Visibility="{Binding CurrentStep, Converter={StaticResource FuncStepVis}, ConverterParameter=Display}">
-            <CheckBox Content="No dead pixels observed" IsChecked="{Binding DisplayDeadPixelsOk}" Margin="0,4"/>
-            <CheckBox Content="Brightness OK" IsChecked="{Binding DisplayBrightnessOk}" Margin="0,4"/>
-            <CheckBox Content="Colors correct" IsChecked="{Binding DisplayColorOk}" Margin="0,4"/>
-            <CheckBox Content="Uniformity acceptable" IsChecked="{Binding DisplayUniformityOk}" Margin="0,4"/>
-            <Button Content="Continue" Style="{StaticResource AccentButton}" Command="{Binding FinishDisplayCommand}" Margin="0,16,0,0" HorizontalAlignment="Left"/>
+            <TextBlock Style="{StaticResource BodyText}" Margin="0,0,0,10"
+                       Text="Check what looks good on your display. Leave any problem unchecked — that records the issue. Continue when you are done reviewing."/>
+            <CheckBox Content="No dead pixels observed" IsChecked="{Binding DisplayDeadPixelsOk}" Style="{StaticResource CompactCheckBox}"/>
+            <CheckBox Content="Brightness OK" IsChecked="{Binding DisplayBrightnessOk}" Style="{StaticResource CompactCheckBox}"/>
+            <CheckBox Content="Colors correct" IsChecked="{Binding DisplayColorOk}" Style="{StaticResource CompactCheckBox}"/>
+            <CheckBox Content="Uniformity acceptable" IsChecked="{Binding DisplayUniformityOk}" Style="{StaticResource CompactCheckBox}"/>
+            <StackPanel Orientation="Horizontal" Margin="0,12,0,0">
+              <Button Content="Continue" Style="{StaticResource PrimaryButton}" Command="{Binding FinishDisplayCommand}"/>
+            </StackPanel>
           </StackPanel>
 
           <StackPanel Visibility="{Binding CurrentStep, Converter={StaticResource FuncStepVis}, ConverterParameter=Speaker}">
-            <TextBlock Text="Speaker check" FontSize="16" FontWeight="SemiBold"
-                       Foreground="{StaticResource TextPrimaryBrush}" Margin="0,0,0,6"/>
-            <TextBlock Style="{StaticResource BodyText}" TextWrapping="Wrap" Margin="0,0,0,12"
-                       Text="We play a short tone in each channel. Use headphones on a laptop if speakers are hard to tell apart."/>
+            <TextBlock Style="{StaticResource FuncStepIntro}" Text="{Binding SpeakerStepIntro}"/>
 
-            <Border Style="{StaticResource AudioStepCardBorder}">
-              <StackPanel>
-                <TextBlock Style="{StaticResource AudioStepLabel}" Text="STEP 1 OF 2"/>
-                <TextBlock Style="{StaticResource AudioStepTitle}" Text="Left channel"/>
-                <TextBlock Style="{StaticResource BodyText}" Margin="0,0,0,12"
-                           Text="Play the tone, then say whether you heard it clearly on the left."/>
-                <Button Content="▶  Play left tone" Command="{Binding PlaySpeakerLeftCommand}"
-                        Style="{StaticResource PrimaryButton}" HorizontalAlignment="Left" Margin="0,0,0,14"/>
-                <TextBlock Style="{StaticResource BodyText}" FontWeight="SemiBold"
-                           Foreground="{StaticResource TextPrimaryBrush}" Margin="0,0,0,8"
-                           Text="Did you hear the tone on the left?"/>
-                <StackPanel Orientation="Horizontal">
-                  <Button Content="Yes — left is clear" Command="{Binding AnswerLeftSpeakerYesCommand}"
-                          Style="{StaticResource AccentButton}" Margin="0,0,8,0"/>
-                  <Button Content="No — couldn't hear left" Command="{Binding AnswerLeftSpeakerNoCommand}"
-                          Style="{StaticResource SecondaryButton}"/>
+            <Grid Margin="0,0,0,16">
+              <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+              </Grid.ColumnDefinitions>
+              <TextBlock Grid.Column="0" HorizontalAlignment="Center">
+                <TextBlock.Style>
+                  <Style TargetType="TextBlock" BasedOn="{StaticResource FuncStepProgressLabel}">
+                    <Style.Triggers>
+                      <DataTrigger Binding="{Binding SpeakerCurrentStep}" Value="1">
+                        <Setter Property="Foreground" Value="{StaticResource AccentBrush}"/>
+                      </DataTrigger>
+                    </Style.Triggers>
+                  </Style>
+                </TextBlock.Style>
+                <Run Text="① Left"/>
+              </TextBlock>
+              <TextBlock Grid.Column="1" Text="→" Foreground="{StaticResource TextSecondaryBrush}" VerticalAlignment="Center" Margin="8,0"/>
+              <TextBlock Grid.Column="2" HorizontalAlignment="Center">
+                <TextBlock.Style>
+                  <Style TargetType="TextBlock" BasedOn="{StaticResource FuncStepProgressLabel}">
+                    <Style.Triggers>
+                      <DataTrigger Binding="{Binding SpeakerCurrentStep}" Value="2">
+                        <Setter Property="Foreground" Value="{StaticResource AccentBrush}"/>
+                      </DataTrigger>
+                    </Style.Triggers>
+                  </Style>
+                </TextBlock.Style>
+                <Run Text="② Right"/>
+              </TextBlock>
+            </Grid>
+
+            <Grid>
+              <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="*"/>
+              </Grid.ColumnDefinitions>
+
+              <Border Grid.Column="0" Margin="0,0,6,0">
+                <Border.Style>
+                  <Style TargetType="Border">
+                    <Setter Property="CornerRadius" Value="10"/>
+                    <Setter Property="Padding" Value="12"/>
+                    <Setter Property="BorderThickness" Value="2"/>
+                    <Setter Property="Background" Value="{StaticResource SurfaceMutedBrush}"/>
+                    <Setter Property="BorderBrush" Value="{StaticResource BorderBrush}"/>
+                    <Setter Property="Opacity" Value="0.55"/>
+                    <Style.Triggers>
+                      <DataTrigger Binding="{Binding IsLeftSpeakerComplete}" Value="True">
+                        <Setter Property="Background" Value="{StaticResource SurfaceBrush}"/>
+                        <Setter Property="BorderBrush" Value="{StaticResource SuccessBrush}"/>
+                        <Setter Property="Opacity" Value="0.85"/>
+                      </DataTrigger>
+                      <DataTrigger Binding="{Binding IsLeftSpeakerActive}" Value="True">
+                        <Setter Property="Background" Value="#F0FDFA"/>
+                        <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}"/>
+                        <Setter Property="Opacity" Value="1"/>
+                      </DataTrigger>
+                    </Style.Triggers>
+                  </Style>
+                </Border.Style>
+                <StackPanel HorizontalAlignment="Center">
+                  <TextBlock Text="LEFT" Style="{StaticResource AudioStepLabel}" HorizontalAlignment="Center"/>
+                  <TextBlock Text="Left channel" Style="{StaticResource AudioStepTitle}" HorizontalAlignment="Center"
+                             TextAlignment="Center" Margin="0,0,0,10"/>
+                  <Button Content="{Binding LeftSpeakerPlayLabel}" Command="{Binding PlaySpeakerLeftCommand}"
+                          Style="{StaticResource FuncPlayButton}" Margin="0,0,0,12" MinWidth="0" Padding="12,8"/>
+                  <TextBlock Style="{StaticResource BodyText}" HorizontalAlignment="Center" TextAlignment="Center"
+                             Margin="0,0,0,8" Text="Heard on the left?"/>
+                  <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                    <Button Content="Yes" Command="{Binding AnswerLeftSpeakerYesCommand}"
+                            Style="{StaticResource SpeakerLeftYesChoice}" Margin="0,0,6,0" MinWidth="0" Padding="10,6"/>
+                    <Button Content="No" Command="{Binding AnswerLeftSpeakerNoCommand}"
+                            Style="{StaticResource SpeakerLeftNoChoice}" MinWidth="0" Padding="10,6"/>
+                  </StackPanel>
                 </StackPanel>
-              </StackPanel>
-            </Border>
+              </Border>
 
-            <Border Style="{StaticResource AudioStepCardBorder}" IsEnabled="{Binding SpeakerLeftStepComplete}">
-              <StackPanel>
-                <TextBlock Style="{StaticResource AudioStepLabel}" Text="STEP 2 OF 2"/>
-                <TextBlock Style="{StaticResource AudioStepTitle}" Text="Right channel"/>
-                <TextBlock Style="{StaticResource BodyText}" Margin="0,0,0,12"
-                           Text="Complete step 1 first, then play the right tone and confirm what you hear."/>
-                <Button Content="▶  Play right tone" Command="{Binding PlaySpeakerRightCommand}"
-                        Style="{StaticResource PrimaryButton}" HorizontalAlignment="Left" Margin="0,0,0,14"/>
-                <TextBlock Style="{StaticResource BodyText}" FontWeight="SemiBold"
-                           Foreground="{StaticResource TextPrimaryBrush}" Margin="0,0,0,8"
-                           Text="Did you hear the tone on the right?"/>
-                <StackPanel Orientation="Horizontal">
-                  <Button Content="Yes — right is clear" Command="{Binding AnswerRightSpeakerYesCommand}"
-                          Style="{StaticResource AccentButton}" Margin="0,0,8,0"/>
-                  <Button Content="No — couldn't hear right" Command="{Binding AnswerRightSpeakerNoCommand}"
-                          Style="{StaticResource SecondaryButton}"/>
+              <Border Grid.Column="1" Margin="6,0,0,0">
+                <Border.Style>
+                  <Style TargetType="Border">
+                    <Setter Property="CornerRadius" Value="10"/>
+                    <Setter Property="Padding" Value="12"/>
+                    <Setter Property="BorderThickness" Value="2"/>
+                    <Setter Property="Background" Value="{StaticResource SurfaceMutedBrush}"/>
+                    <Setter Property="BorderBrush" Value="{StaticResource BorderBrush}"/>
+                    <Setter Property="Opacity" Value="0.55"/>
+                    <Style.Triggers>
+                      <DataTrigger Binding="{Binding IsRightSpeakerComplete}" Value="True">
+                        <Setter Property="Background" Value="{StaticResource SurfaceBrush}"/>
+                        <Setter Property="BorderBrush" Value="{StaticResource SuccessBrush}"/>
+                        <Setter Property="Opacity" Value="0.85"/>
+                      </DataTrigger>
+                      <DataTrigger Binding="{Binding IsRightSpeakerActive}" Value="True">
+                        <Setter Property="Background" Value="#F0FDFA"/>
+                        <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}"/>
+                        <Setter Property="Opacity" Value="1"/>
+                      </DataTrigger>
+                    </Style.Triggers>
+                  </Style>
+                </Border.Style>
+                <StackPanel HorizontalAlignment="Center" IsEnabled="{Binding SpeakerLeftStepComplete}">
+                  <TextBlock Text="RIGHT" Style="{StaticResource AudioStepLabel}" HorizontalAlignment="Center"/>
+                  <TextBlock Text="Right channel" Style="{StaticResource AudioStepTitle}" HorizontalAlignment="Center"
+                             TextAlignment="Center" Margin="0,0,0,10"/>
+                  <Button Content="{Binding RightSpeakerPlayLabel}" Command="{Binding PlaySpeakerRightCommand}"
+                          Style="{StaticResource FuncPlayButton}" Margin="0,0,0,12" MinWidth="0" Padding="12,8"/>
+                  <TextBlock Style="{StaticResource BodyText}" HorizontalAlignment="Center" TextAlignment="Center"
+                             Margin="0,0,0,8" Text="Heard on the right?"/>
+                  <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                    <Button Content="Yes" Command="{Binding AnswerRightSpeakerYesCommand}"
+                            Style="{StaticResource SpeakerRightYesChoice}" Margin="0,0,6,0" MinWidth="0" Padding="10,6"/>
+                    <Button Content="No" Command="{Binding AnswerRightSpeakerNoCommand}"
+                            Style="{StaticResource SpeakerRightNoChoice}" MinWidth="0" Padding="10,6"/>
+                  </StackPanel>
+                  <TextBlock Style="{StaticResource BodyText}" HorizontalAlignment="Center" TextAlignment="Center"
+                             Margin="0,8,0,0" Foreground="{StaticResource TextSecondaryBrush}"
+                             Text="Do the left side first."
+                             Visibility="{Binding SpeakerLeftStepComplete, Converter={StaticResource BoolVis}, ConverterParameter=Invert}"/>
                 </StackPanel>
-              </StackPanel>
-            </Border>
-
-            <Button Content="Speakers not working — skip to microphone" Command="{Binding SkipSpeakersCommand}"
-                    Style="{StaticResource SecondaryButton}" HorizontalAlignment="Left"/>
+              </Border>
+            </Grid>
           </StackPanel>
 
           <StackPanel Visibility="{Binding CurrentStep, Converter={StaticResource FuncStepVis}, ConverterParameter=Microphone}">
-            <TextBlock Text="Microphone check" FontSize="16" FontWeight="SemiBold"
-                       Foreground="{StaticResource TextPrimaryBrush}" Margin="0,0,0,6"/>
-            <TextBlock Style="{StaticResource BodyText}" TextWrapping="Wrap" Margin="0,0,0,12"
-                       Text="Your voice is recorded on this device only, played back once, then deleted. Nothing is uploaded."/>
+            <TextBlock Style="{StaticResource FuncStepIntro}" Text="{Binding MicStepIntro}"/>
 
-            <Border Style="{StaticResource AudioStepCardBorder}">
-              <StackPanel>
-                <TextBlock Style="{StaticResource AudioStepLabel}" Text="STEP 1 OF 3"/>
-                <TextBlock Style="{StaticResource AudioStepTitle}" Text="Record"/>
-                <TextBlock Style="{StaticResource BodyText}" Margin="0,0,0,12"
-                           Text="Speak normally for about 4 seconds after you press Record."/>
-                <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
-                  <Button Content="●  Record sample" Command="{Binding RecordMicrophoneSampleCommand}"
-                          Style="{StaticResource PrimaryButton}" Margin="0,0,12,0"/>
-                  <StackPanel VerticalAlignment="Center"
-                              Visibility="{Binding IsRecordingMic, Converter={StaticResource BoolVis}}">
-                    <ProgressBar IsIndeterminate="True" Width="120" Height="6" Margin="0,0,0,6"/>
-                    <TextBlock Style="{StaticResource BodyText}" Text="Recording…"/>
+            <Grid Margin="0,0,0,16">
+              <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+              </Grid.ColumnDefinitions>
+              <TextBlock Grid.Column="0" HorizontalAlignment="Center">
+                <TextBlock.Style>
+                  <Style TargetType="TextBlock" BasedOn="{StaticResource FuncStepProgressLabel}">
+                    <Style.Triggers>
+                      <DataTrigger Binding="{Binding MicCurrentPhase}" Value="1">
+                        <Setter Property="Foreground" Value="{StaticResource AccentBrush}"/>
+                      </DataTrigger>
+                    </Style.Triggers>
+                  </Style>
+                </TextBlock.Style>
+                <Run Text="Record"/>
+              </TextBlock>
+              <TextBlock Grid.Column="1" Text="→" Foreground="{StaticResource TextSecondaryBrush}" VerticalAlignment="Center" Margin="6,0"/>
+              <TextBlock Grid.Column="2" HorizontalAlignment="Center">
+                <TextBlock.Style>
+                  <Style TargetType="TextBlock" BasedOn="{StaticResource FuncStepProgressLabel}">
+                    <Style.Triggers>
+                      <DataTrigger Binding="{Binding MicCurrentPhase}" Value="2">
+                        <Setter Property="Foreground" Value="{StaticResource AccentBrush}"/>
+                      </DataTrigger>
+                    </Style.Triggers>
+                  </Style>
+                </TextBlock.Style>
+                <Run Text="Listen"/>
+              </TextBlock>
+              <TextBlock Grid.Column="3" Text="→" Foreground="{StaticResource TextSecondaryBrush}" VerticalAlignment="Center" Margin="6,0"/>
+              <TextBlock Grid.Column="4" HorizontalAlignment="Center">
+                <TextBlock.Style>
+                  <Style TargetType="TextBlock" BasedOn="{StaticResource FuncStepProgressLabel}">
+                    <Style.Triggers>
+                      <DataTrigger Binding="{Binding MicCurrentPhase}" Value="3">
+                        <Setter Property="Foreground" Value="{StaticResource AccentBrush}"/>
+                      </DataTrigger>
+                    </Style.Triggers>
+                  </Style>
+                </TextBlock.Style>
+                <Run Text="Confirm"/>
+              </TextBlock>
+            </Grid>
+
+            <Border Style="{StaticResource FuncSubStepPanelActive}">
+              <StackPanel HorizontalAlignment="Center">
+                <StackPanel Visibility="{Binding IsMicRecordPhaseActive, Converter={StaticResource BoolVis}}">
+                  <TextBlock Text="Say this phrase clearly:" Style="{StaticResource BodyText}" HorizontalAlignment="Center" Margin="0,0,0,8"/>
+                  <TextBlock Text="{Binding MicPromptPhrase}" FontSize="16" FontWeight="SemiBold"
+                             Foreground="{StaticResource TextPrimaryBrush}" HorizontalAlignment="Center"
+                             TextAlignment="Center" Margin="0,0,0,16"/>
+                  <Button Content="Start recording" Command="{Binding RecordMicrophoneSampleCommand}"
+                          Style="{StaticResource FuncPlayButton}" Margin="0,0,0,12"/>
+                  <StackPanel Visibility="{Binding IsRecordingMic, Converter={StaticResource BoolVis}}">
+                    <ProgressBar IsIndeterminate="True" Width="180" Height="6" Margin="0,0,0,8"/>
+                    <TextBlock Style="{StaticResource BodyText}" HorizontalAlignment="Center"
+                               Text="Recording for 4 seconds…"/>
                   </StackPanel>
                 </StackPanel>
-                <TextBlock Style="{StaticResource BodyText}"
-                           Visibility="{Binding MicSampleReady, Converter={StaticResource BoolVis}}"
-                           Foreground="{StaticResource SuccessBrush}"
-                           Text="✓ Sample recorded — continue to step 2."/>
-              </StackPanel>
-            </Border>
 
-            <Border Style="{StaticResource AudioStepCardBorder}" IsEnabled="{Binding MicSampleReady}">
-              <StackPanel>
-                <TextBlock Style="{StaticResource AudioStepLabel}" Text="STEP 2 OF 3"/>
-                <TextBlock Style="{StaticResource AudioStepTitle}" Text="Listen"/>
-                <TextBlock Style="{StaticResource BodyText}" Margin="0,0,0,12"
-                           Text="Play your recording back and listen with your speakers or headphones."/>
-                <Button Content="▶  Play my recording" Command="{Binding PlayMicrophoneSampleCommand}"
-                        Style="{StaticResource PrimaryButton}" HorizontalAlignment="Left"/>
-              </StackPanel>
-            </Border>
+                <StackPanel Visibility="{Binding IsMicListenPhaseActive, Converter={StaticResource BoolVis}}">
+                  <TextBlock Text="Recording saved" Style="{StaticResource AudioStepTitle}" HorizontalAlignment="Center" Margin="0,0,0,12"/>
+                  <Button Content="{Binding MicPlayButtonLabel}" Command="{Binding PlayMicrophoneSampleCommand}"
+                          Style="{StaticResource FuncPlayButton}" Margin="0,0,0,12"/>
+                  <ProgressBar IsIndeterminate="True" Width="180" Height="6"
+                               Visibility="{Binding IsPlayingMicSample, Converter={StaticResource BoolVis}}"/>
+                  <TextBlock Style="{StaticResource BodyText}" HorizontalAlignment="Center" Margin="0,8,0,0"
+                             Text="{Binding MicStepStatus}" TextWrapping="Wrap" TextAlignment="Center"
+                             Visibility="{Binding MicStepStatus, Converter={StaticResource StringNotEmptyVis}}"/>
+                </StackPanel>
 
-            <Border Style="{StaticResource AudioStepCardBorder}" IsEnabled="{Binding MicSampleReady}">
-              <StackPanel>
-                <TextBlock Style="{StaticResource AudioStepLabel}" Text="STEP 3 OF 3"/>
-                <TextBlock Style="{StaticResource AudioStepTitle}" Text="Confirm"/>
-                <TextBlock Style="{StaticResource BodyText}" Margin="0,0,0,12"
-                           Text="Did the playback sound like your voice?"/>
-                <StackPanel Orientation="Horizontal">
-                  <Button Content="Yes — mic works" Command="{Binding ConfirmMicrophonePassedCommand}"
-                          Style="{StaticResource AccentButton}" Margin="0,0,8,0"/>
-                  <Button Content="No — mic doesn't work" Command="{Binding ConfirmMicrophoneFailedCommand}"
-                          Style="{StaticResource SecondaryButton}"/>
+                <StackPanel Visibility="{Binding IsMicConfirmPhaseActive, Converter={StaticResource BoolVis}}">
+                  <TextBlock Text="Did the playback sound like your voice?" Style="{StaticResource AudioStepTitle}"
+                             HorizontalAlignment="Center" TextAlignment="Center" Margin="0,0,0,14"/>
+                  <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                    <Button Content="Yes, sounds good" Command="{Binding ConfirmMicrophonePassedCommand}"
+                            Style="{StaticResource MicYesChoice}" Margin="0,0,8,0"/>
+                    <Button Content="No, problem" Command="{Binding ConfirmMicrophoneFailedCommand}"
+                            Style="{StaticResource MicNoChoice}"/>
+                  </StackPanel>
                 </StackPanel>
               </StackPanel>
             </Border>
           </StackPanel>
 
           <StackPanel Visibility="{Binding CurrentStep, Converter={StaticResource FuncStepVis}, ConverterParameter=Camera}">
-            <TextBlock Style="{StaticResource BodyText}" TextWrapping="Wrap" Margin="0,0,0,12"
-                       Text="Live preview remains on this device. No images or video are uploaded."/>
-            <Border Background="{StaticResource SurfaceMutedBrush}" CornerRadius="8" Height="220" Margin="0,0,0,8">
+            <TextBlock Style="{StaticResource FuncStepIntro}" Text="{Binding CameraStepIntro}"/>
+
+            <Border Height="280" Margin="0,0,0,12">
+              <Border.Style>
+                <Style TargetType="Border" BasedOn="{StaticResource CameraPreviewFrame}">
+                  <Style.Triggers>
+                    <DataTrigger Binding="{Binding ShowCameraLiveBadge}" Value="True">
+                      <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}"/>
+                    </DataTrigger>
+                  </Style.Triggers>
+                </Style>
+              </Border.Style>
               <Grid>
                 <Image Source="{Binding CameraPreviewFrame}" Stretch="Uniform"/>
+                <Border Style="{StaticResource LiveBadge}"
+                        Visibility="{Binding ShowCameraLiveBadge, Converter={StaticResource BoolVis}}">
+                  <TextBlock Text="● LIVE" Foreground="White" FontSize="11" FontWeight="Bold"/>
+                </Border>
                 <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center"
                             Visibility="{Binding IsCameraStarting, Converter={StaticResource BoolVis}}">
-                  <ProgressBar IsIndeterminate="True" Width="180" Height="8" Margin="0,0,0,10"/>
-                  <TextBlock Text="Starting camera…" Style="{StaticResource BodyText}" HorizontalAlignment="Center"/>
+                  <ProgressBar IsIndeterminate="True" Width="200" Height="8" Margin="0,0,0,12"/>
+                  <TextBlock Text="Starting camera…" Foreground="White" FontSize="14" HorizontalAlignment="Center"/>
+                </StackPanel>
+                <StackPanel VerticalAlignment="Bottom" HorizontalAlignment="Stretch" Margin="12,0,12,10"
+                            Visibility="{Binding ShowCameraLiveBadge, Converter={StaticResource BoolVis}}">
+                  <TextBlock Foreground="#E2E8F0" FontSize="11" HorizontalAlignment="Center">
+                    <Run Text="{Binding CameraName, Mode=OneWay}"/>
+                    <Run Text=" · "/>
+                    <Run Text="{Binding CameraResolution, Mode=OneWay}"/>
+                  </TextBlock>
                 </StackPanel>
               </Grid>
             </Border>
-            <TextBlock Style="{StaticResource BodyText}" Margin="0,0,0,8"
-                       Text="{Binding CameraName, StringFormat=Camera: {0}}"/>
-            <TextBlock Style="{StaticResource BodyText}" Margin="0,0,0,8"
-                       Text="{Binding CameraResolution, StringFormat=Resolution: {0}}"/>
-            <TextBlock Style="{StaticResource BodyText}" Margin="0,0,0,12"
-                       Text="{Binding CameraStatus}" TextWrapping="Wrap"/>
+
             <Border Style="{StaticResource InstructionCardBorder}" Margin="0,0,0,12"
                     Visibility="{Binding ShowsCameraAccessInstructions, Converter={StaticResource BoolVis}}">
               <StackPanel>
                 <TextBlock Text="{Binding CameraHelpTitle}" FontWeight="SemiBold" FontSize="14"
                            Foreground="{StaticResource WarningBrush}" Margin="0,0,0,8"/>
                 <TextBlock Style="{StaticResource BodyText}" Margin="0,0,0,10" TextWrapping="Wrap"
-                           Text="Windows must allow desktop apps to use your camera before the live preview can start."/>
+                           Text="Allow desktop apps to use your camera in Windows settings, then retry."/>
                 <ItemsControl ItemsSource="{Binding CameraAccessSteps}" Margin="0,0,0,12">
                   <ItemsControl.ItemTemplate>
                     <DataTemplate>
@@ -322,31 +553,58 @@
                     </DataTemplate>
                   </ItemsControl.ItemTemplate>
                 </ItemsControl>
-                <Button Content="Open Windows camera settings" Command="{Binding OpenCameraSettingsCommand}"
-                        Style="{StaticResource PrimaryButton}" HorizontalAlignment="Left"/>
+                <StackPanel Orientation="Horizontal">
+                  <Button Content="Open camera settings" Command="{Binding OpenCameraSettingsCommand}"
+                          Style="{StaticResource SecondaryButton}" Margin="0,0,8,0"/>
+                  <Button Content="Retry preview" Command="{Binding RetryCameraPreviewCommand}"
+                          Style="{StaticResource SecondaryButton}"/>
+                </StackPanel>
               </StackPanel>
             </Border>
-            <Button Content="Retry camera" Command="{Binding RetryCameraPreviewCommand}" Style="{StaticResource SecondaryButton}" Margin="0,0,0,8"/>
-            <Button Content="I can clearly see the preview" Command="{Binding ConfirmCameraPreviewYesCommand}" Style="{StaticResource AccentButton}" Margin="0,0,0,8"/>
-            <Button Content="Camera failed" Command="{Binding ConfirmCameraFailedCommand}" Style="{StaticResource SecondaryButton}" HorizontalAlignment="Left"/>
+
+            <TextBlock Style="{StaticResource BodyText}" Margin="0,0,0,12" TextWrapping="Wrap"
+                       Text="{Binding CameraStatus}"
+                       Visibility="{Binding ShowsCameraAccessInstructions, Converter={StaticResource BoolVis}, ConverterParameter=Invert}"/>
+
+            <Border Style="{StaticResource FuncSubStepPanelActive}"
+                    Visibility="{Binding ShowCameraConfirmPrompt, Converter={StaticResource BoolVis}}">
+              <StackPanel HorizontalAlignment="Center">
+                <TextBlock Text="Can you see yourself clearly in the preview?" Style="{StaticResource AudioStepTitle}"
+                           HorizontalAlignment="Center" TextAlignment="Center" Margin="0,0,0,14"/>
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                  <Button Content="Yes, looks good" Command="{Binding ConfirmCameraPreviewYesCommand}"
+                          Style="{StaticResource CameraYesChoice}" Margin="0,0,8,0"/>
+                  <Button Content="No, there's a problem" Command="{Binding ConfirmCameraFailedCommand}"
+                          Style="{StaticResource CameraNoChoice}"/>
+                </StackPanel>
+              </StackPanel>
+            </Border>
+
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,8,0,0"
+                        Visibility="{Binding ShowCameraConfirmPrompt, Converter={StaticResource BoolVis}, ConverterParameter=Invert}">
+              <Button Content="Retry preview" Command="{Binding RetryCameraPreviewCommand}"
+                      Style="{StaticResource SecondaryButton}"/>
+            </StackPanel>
           </StackPanel>
 
           <StackPanel Visibility="{Binding CurrentStep, Converter={StaticResource FuncStepVis}, ConverterParameter=Keyboard}">
+            <TextBlock Style="{StaticResource BodyText}" Margin="0,0,0,8"
+                       Text="Press at least 5 different keys, then tap Done."/>
             <TextBlock Text="{Binding KeyboardCaptureStatus}" Style="{StaticResource BodyText}" Margin="0,0,0,8"/>
             <TextBox Text="{Binding KeysPressedDisplay}" IsReadOnly="True" Height="80" TextWrapping="Wrap" Margin="0,0,0,12"/>
             <StackPanel Orientation="Horizontal">
-              <Button Content="Done" Command="{Binding FinishKeyboardCommand}" Style="{StaticResource AccentButton}" Margin="0,0,8,0"/>
-              <Button Content="Skip" Command="{Binding SkipKeyboardCommand}" Style="{StaticResource SecondaryButton}"/>
+              <Button Content="Done" Command="{Binding FinishKeyboardCommand}" Style="{StaticResource PrimaryButton}"/>
             </StackPanel>
           </StackPanel>
 
           <StackPanel Visibility="{Binding CurrentStep, Converter={StaticResource FuncStepVis}, ConverterParameter=Touchpad}">
-            <CheckBox Content="Movement detected" IsChecked="{Binding TouchpadMoved}" Margin="0,4"/>
-            <CheckBox Content="Left click" IsChecked="{Binding LeftClickOk}" Margin="0,4"/>
-            <CheckBox Content="Right click" IsChecked="{Binding RightClickOk}" Margin="0,4"/>
-            <StackPanel Orientation="Horizontal" Margin="0,12,0,0">
-              <Button Content="Continue" Command="{Binding FinishTouchpadCommand}" Style="{StaticResource AccentButton}" Margin="0,0,8,0"/>
-              <Button Content="Skip" Command="{Binding SkipTouchpadCommand}" Style="{StaticResource SecondaryButton}"/>
+            <TextBlock Style="{StaticResource BodyText}" Margin="0,0,0,10"
+                       Text="Move the touchpad and test left and right clicks, then continue."/>
+            <CheckBox Content="Movement detected" IsChecked="{Binding TouchpadMoved}" Style="{StaticResource CompactCheckBox}"/>
+            <CheckBox Content="Left click" IsChecked="{Binding LeftClickOk}" Style="{StaticResource CompactCheckBox}"/>
+            <CheckBox Content="Right click" IsChecked="{Binding RightClickOk}" Style="{StaticResource CompactCheckBox}"/>
+            <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
+              <Button Content="Continue" Command="{Binding FinishTouchpadCommand}" Style="{StaticResource PrimaryButton}"/>
             </StackPanel>
           </StackPanel>
 
@@ -354,19 +612,16 @@
             <TextBlock Style="{StaticResource BodyText}" TextWrapping="Wrap" Margin="0,0,0,8"
                        Text="Only connection status is validated. Files and contents are never accessed."/>
             <TextBlock Style="{StaticResource BodyText}" Text="{Binding UsbStatus}" Margin="0,0,0,12"/>
-            <Button Content="USB inserted" Command="{Binding ConfirmUsbInsertDetectedCommand}" Style="{StaticResource SecondaryButton}" Margin="0,0,0,8"/>
+            <Button Content="I inserted a USB device" Command="{Binding ConfirmUsbInsertDetectedCommand}" Style="{StaticResource SecondaryButton}" Margin="0,0,0,8"/>
+            <TextBlock Style="{StaticResource BodyText}" Margin="0,0,0,8"
+                       Text="After confirming insert, choose Pass or Fail."/>
             <StackPanel Orientation="Horizontal">
-              <Button Content="Test complete" Command="{Binding FinishUsbTestCommand}" Style="{StaticResource AccentButton}" Margin="0,0,8,0"/>
-              <Button Content="USB failed" Command="{Binding ConfirmUsbFailedCommand}" Style="{StaticResource SecondaryButton}" Margin="0,0,8,0"/>
-              <Button Content="Skip" Command="{Binding SkipPortsCommand}" Style="{StaticResource SecondaryButton}"/>
+              <Button Content="Pass" Command="{Binding FinishUsbTestCommand}" Style="{StaticResource UsbPassChoice}" Margin="0,0,8,0"/>
+              <Button Content="Fail" Command="{Binding ConfirmUsbFailedCommand}" Style="{StaticResource UsbFailChoice}"/>
             </StackPanel>
           </StackPanel>
 
-            </Grid>
-          </Border>
-
-          <StackPanel Visibility="{Binding CurrentStep, Converter={StaticResource FuncStepVis}, ConverterParameter=Complete}"
-                      Margin="0,16,0,0">
+          <StackPanel Visibility="{Binding CurrentStep, Converter={StaticResource FuncStepVis}, ConverterParameter=Complete}">
             <StackPanel Visibility="{Binding DataContext.IsPreparingReport, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource BoolVis}}"
                         Margin="0,0,0,12">
               <ProgressBar IsIndeterminate="True" Height="8" Margin="0,0,0,10"/>
@@ -377,19 +632,37 @@
             <TextBlock Style="{StaticResource BodyText}" Margin="0,0,0,12" TextWrapping="Wrap"
                        Visibility="{Binding DataContext.IsReportReady, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource BoolVis}}"
                        Text="Your inspection report is ready to review."/>
-            <Button Content="View inspection report" Style="{StaticResource AccentButton}"
+            <Button Content="View inspection report" Style="{StaticResource PrimaryButton}"
                     Command="{Binding DataContext.ViewInspectionReportCommand, RelativeSource={RelativeSource AncestorType=Window}}"
                     IsEnabled="{Binding DataContext.IsReportReady, RelativeSource={RelativeSource AncestorType=Window}}"/>
             <Button Content="Retry report preparation" Style="{StaticResource SecondaryButton}" Margin="0,8,0,0"
                     Visibility="{Binding DataContext.ReportPreparationFailed, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource BoolVis}}"
                     Command="{Binding DataContext.RetryReportPreparationCommand, RelativeSource={RelativeSource AncestorType=Window}}"/>
           </StackPanel>
+
+            </Grid>
+            </Grid>
+          </Border>
           </StackPanel>
         </StackPanel>
 
         <!-- 5 Result preview -->
         <StackPanel Visibility="{Binding CurrentPage, Converter={StaticResource PageVis}, ConverterParameter=ResultPreview}">
           <TextBlock Text="Review before submitting" Style="{StaticResource PageTitle}" Margin="0,0,0,8"/>
+          <Border Style="{StaticResource InstructionCardBorder}" Margin="0,0,0,12"
+                  Visibility="{Binding ShowUnlinkedAccountBanner, Converter={StaticResource BoolVis}}">
+            <TextBlock Style="{StaticResource BodyText}" TextWrapping="Wrap"
+                       Text="This scan is not linked to a Certronx account. You'll receive a certificate code and report link to share. To save future certs to your dashboard, start from certronx.com/download while signed in."/>
+          </Border>
+          <Border Style="{StaticResource HeroCardBorder}" Margin="0,0,0,12"
+                  Visibility="{Binding ShowAccountLinkedBanner, Converter={StaticResource BoolVis}}">
+            <TextBlock Style="{StaticResource BodyText}" TextWrapping="Wrap"
+                       Foreground="{StaticResource TextPrimaryBrush}">
+              <Run Text="Linked to "/>
+              <Run Text="{Binding LinkedAccountName}" FontWeight="SemiBold"/>
+              <Run Text=" — submitting will save this certificate to your Certronx account."/>
+            </TextBlock>
+          </Border>
           <TextBlock Style="{StaticResource BodyText}" Margin="0,0,0,12" TextWrapping="Wrap"
                      Text="Professional inspection summary — submit to receive your server-signed certificate."/>
           <StackPanel Visibility="{Binding IsPreparingReport, Converter={StaticResource BoolVis}}" Margin="0,0,0,12">
@@ -407,7 +680,7 @@
                     </Grid.ColumnDefinitions>
                     <StackPanel Grid.Column="0">
                       <TextBlock Text="Recommended resale grade" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}"/>
-                      <TextBlock Text="{Binding RecommendedResaleGrade, TargetNullValue=—}" Style="{StaticResource ReportGradeValue}" Margin="0,4,0,0"/>
+                      <TextBlock Text="{Binding RecommendedResaleGrade, TargetNullValue=-}" Style="{StaticResource ReportGradeValue}" Margin="0,4,0,0"/>
                     </StackPanel>
                     <Border Grid.Column="1" Background="{StaticResource SurfaceBrush}" CornerRadius="8" Padding="12,8" VerticalAlignment="Center">
                       <TextBlock Text="Inspection summary" FontWeight="SemiBold" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}"/>
@@ -421,56 +694,21 @@
                 <TextBlock Style="{StaticResource ReportSectionTitle}" Text="HEALTH SUMMARY"/>
                 <TextBlock Style="{StaticResource ReportSectionBody}" Text="{Binding HealthSummary}" Margin="0,0,0,16"/>
 
-                <Grid Margin="0,0,0,16">
-                  <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="*"/>
-                  </Grid.ColumnDefinitions>
-                  <StackPanel Grid.Column="0" Margin="0,0,10,0">
-                    <TextBlock Style="{StaticResource ReportSectionTitle}" Text="BATTERY"/>
-                    <TextBlock Style="{StaticResource ReportSectionBody}" Text="{Binding BatteryCondition}"/>
-                  </StackPanel>
-                  <StackPanel Grid.Column="1" Margin="10,0,0,0">
-                    <TextBlock Style="{StaticResource ReportSectionTitle}" Text="STORAGE"/>
-                    <TextBlock Style="{StaticResource ReportSectionBody}" Text="{Binding StorageCondition}" TextWrapping="Wrap"/>
-                  </StackPanel>
-                </Grid>
+                <TextBlock Style="{StaticResource ReportSectionTitle}" Text="HARDWARE"/>
+                <ItemsControl ItemsSource="{Binding HardwareChecks}" ItemTemplate="{StaticResource ReportCheckRowTemplate}" Margin="0,0,0,16"/>
 
-                <Grid Margin="0,0,0,16">
-                  <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="*"/>
-                  </Grid.ColumnDefinitions>
-                  <StackPanel Grid.Column="0" Margin="0,0,10,0">
-                    <TextBlock Style="{StaticResource ReportSectionTitle}" Text="PERFORMANCE"/>
-                    <TextBlock Style="{StaticResource ReportSectionBody}" Text="{Binding PerformanceRating}"/>
-                  </StackPanel>
-                  <StackPanel Grid.Column="1" Margin="10,0,0,0">
-                    <TextBlock Style="{StaticResource ReportSectionTitle}" Text="SECURITY"/>
-                    <TextBlock Style="{StaticResource ReportSectionBody}" Text="{Binding SecurityRating}"/>
-                  </StackPanel>
-                </Grid>
+                <TextBlock Style="{StaticResource ReportSectionTitle}" Text="SECURITY"/>
+                <ItemsControl ItemsSource="{Binding SecurityChecks}" ItemTemplate="{StaticResource ReportCheckRowTemplate}" Margin="0,0,0,16"/>
 
                 <TextBlock Style="{StaticResource ReportSectionTitle}" Text="FUNCTIONAL TESTS"/>
-                <ItemsControl ItemsSource="{Binding FunctionalTestLines}" Margin="0,0,0,16">
-                  <ItemsControl.ItemTemplate>
-                    <DataTemplate>
-                      <Grid Margin="0,0,0,6">
-                        <Grid.ColumnDefinitions>
-                          <ColumnDefinition Width="Auto"/>
-                          <ColumnDefinition Width="*"/>
-                        </Grid.ColumnDefinitions>
-                        <TextBlock Grid.Column="0" Text="•" Style="{StaticResource ReportSectionBody}" Margin="0,0,8,0"/>
-                        <TextBlock Grid.Column="1" Text="{Binding}" Style="{StaticResource ReportSectionBody}"/>
-                      </Grid>
-                    </DataTemplate>
-                  </ItemsControl.ItemTemplate>
-                </ItemsControl>
+                <ItemsControl ItemsSource="{Binding FunctionalChecks}" ItemTemplate="{StaticResource ReportCheckRowTemplate}" Margin="0,0,0,16"/>
 
                 <TextBlock Style="{StaticResource ReportSectionTitle}" Text="REFURBISHER NOTES"/>
-                <TextBlock Style="{StaticResource ReportSectionBody}"
-                           Text="{Binding RefurbisherNotes, TargetNullValue=No additional notes.}"
-                           Foreground="{StaticResource TextSecondaryBrush}"/>
+                <TextBlock Style="{StaticResource ReportSectionBody}" Foreground="{StaticResource TextSecondaryBrush}">
+                  <TextBlock.Text>
+                    <Binding Path="RefurbisherNotes" FallbackValue="No additional notes."/>
+                  </TextBlock.Text>
+                </TextBlock>
               </StackPanel>
             </ScrollViewer>
           </Border>
@@ -482,23 +720,40 @@
               </Grid.ColumnDefinitions>
               <StackPanel Grid.Column="0" Margin="0,0,12,0">
                 <TextBlock Text="Device" FontWeight="SemiBold" Foreground="{StaticResource TextPrimaryBrush}" Margin="0,0,0,8"/>
-                <TextBlock Style="{StaticResource BodyText}" Text="{Binding DeviceName, StringFormat=Name: {0}}"/>
-                <TextBlock Style="{StaticResource BodyText}" Text="{Binding OsVersion, StringFormat=OS: {0}}"/>
-                <TextBlock Style="{StaticResource BodyText}" Text="{Binding Cpu, StringFormat=CPU: {0}}"/>
-                <TextBlock Style="{StaticResource BodyText}" Text="{Binding Ram, StringFormat=RAM: {0}}"/>
-                <TextBlock Style="{StaticResource BodyText}" Text="{Binding Storage, StringFormat=Storage: {0}}"/>
-                <TextBlock Style="{StaticResource BodyText}" Text="{Binding Display, StringFormat=Display: {0}}"/>
+                <TextBlock Style="{StaticResource BodyText}">
+                  <Run Text="Name: "/><Run Text="{Binding DeviceName, Mode=OneWay, TargetNullValue=Unknown}"/>
+                </TextBlock>
+                <TextBlock Style="{StaticResource BodyText}">
+                  <Run Text="OS: "/><Run Text="{Binding OsVersion, Mode=OneWay, TargetNullValue=Unknown}"/>
+                </TextBlock>
+                <TextBlock Style="{StaticResource BodyText}">
+                  <Run Text="CPU: "/><Run Text="{Binding Cpu, Mode=OneWay, TargetNullValue=Unknown}"/>
+                </TextBlock>
+                <TextBlock Style="{StaticResource BodyText}">
+                  <Run Text="RAM: "/><Run Text="{Binding Ram, Mode=OneWay, TargetNullValue=Unknown}"/>
+                </TextBlock>
+                <TextBlock Style="{StaticResource BodyText}">
+                  <Run Text="Storage: "/><Run Text="{Binding Storage, Mode=OneWay, TargetNullValue=Unknown}"/>
+                </TextBlock>
+                <TextBlock Style="{StaticResource BodyText}">
+                  <Run Text="Display: "/><Run Text="{Binding Display, Mode=OneWay, TargetNullValue=Unknown}"/>
+                </TextBlock>
               </StackPanel>
               <StackPanel Grid.Column="1">
                 <TextBlock Text="Health &amp; checks" FontWeight="SemiBold" Foreground="{StaticResource TextPrimaryBrush}" Margin="0,0,0,8"/>
-                <TextBlock Style="{StaticResource BodyText}" Text="{Binding Battery, StringFormat=Battery: {0}}"/>
-                <TextBlock Style="{StaticResource BodyText}" Text="{Binding StorageHealth, StringFormat=Storage health: {0}}"/>
-                <TextBlock Style="{StaticResource BodyText}" Text="{Binding Graphics, StringFormat=Graphics: {0}}"/>
-                <TextBlock Style="{StaticResource BodyText}" Text="{Binding Security, StringFormat=Security: {0}}"/>
-                <TextBlock Style="{StaticResource BodyText}" Text="{Binding CoreChecks, StringFormat=Checks: {0}}"/>
-                <TextBlock Style="{StaticResource BodyText}" Text="{Binding ScanType, StringFormat=Scan: {0}}"/>
-                <TextBlock Foreground="{StaticResource AccentBrush}" Margin="0,8,0,0"
-                           Text="{Binding CompletenessPercent, StringFormat=Completeness: {0:F0}%}"/>
+                <ItemsControl ItemsSource="{Binding HealthChecks}" ItemTemplate="{StaticResource ReportCheckRowTemplate}"/>
+                <TextBlock Foreground="{StaticResource AccentBrush}" Margin="0,10,0,0">
+                  <Run Text="Completeness: "/>
+                  <Run>
+                    <Run.Text>
+                      <Binding Path="CompletenessPercent" FallbackValue="0"/>
+                    </Run.Text>
+                  </Run>
+                  <Run Text="%"/>
+                </TextBlock>
+                <TextBlock Style="{StaticResource BodyText}" Margin="0,4,0,0">
+                  <Run Text="Scan: "/><Run Text="{Binding ScanType, Mode=OneWay, TargetNullValue=Unknown}"/>
+                </TextBlock>
               </StackPanel>
             </Grid>
           </Border>
@@ -509,14 +764,16 @@
               <ItemsControl ItemsSource="{Binding Warnings}">
                 <ItemsControl.ItemTemplate>
                   <DataTemplate>
-                    <TextBlock Style="{StaticResource BodyText}" Text="{Binding StringFormat=• {0}}" Margin="0,0,0,4"/>
+                    <TextBlock Style="{StaticResource BodyText}" Margin="0,0,0,4">
+                      <Run Text="&#8226; "/><Run Text="{Binding Mode=OneWay}"/>
+                    </TextBlock>
                   </DataTemplate>
                 </ItemsControl.ItemTemplate>
               </ItemsControl>
             </StackPanel>
           </Border>
           <StackPanel Orientation="Horizontal">
-            <Button Content="Submit to VerifyTech" Style="{StaticResource AccentButton}" Command="{Binding SubmitCertificationCommand}" Margin="0,0,10,0"/>
+            <Button Content="Submit to Certronx" Style="{StaticResource AccentButton}" Command="{Binding SubmitCertificationCommand}" Margin="0,0,10,0"/>
             <Button Content="Scan again" Style="{StaticResource SecondaryButton}" Command="{Binding BackToWelcomeCommand}"/>
           </StackPanel>
           <TextBlock Text="{Binding ErrorMessage}" Foreground="{StaticResource ErrorBrush}" Margin="0,12,0,0"
@@ -536,8 +793,15 @@
             <StackPanel HorizontalAlignment="Center">
               <TextBlock Text="Certified" FontSize="30" FontWeight="SemiBold" Foreground="{StaticResource AccentBrush}" HorizontalAlignment="Center"/>
               <TextBlock Text="{Binding CertResult.CertificateCode}" FontSize="22" FontFamily="Consolas" Margin="0,14,0,0" HorizontalAlignment="Center"/>
-              <TextBlock Style="{StaticResource BodyText}" Margin="0,10,0,0" HorizontalAlignment="Center"
-                         Text="Your certificate was signed by VerifyTech."/>
+              <TextBlock Style="{StaticResource BodyText}" Margin="0,10,0,0" HorizontalAlignment="Center" TextWrapping="Wrap"
+                         Text="Your certificate was signed by Certronx."
+                         Visibility="{Binding ShowCertificateLinkedToAccount, Converter={StaticResource InverseBool}}"/>
+              <TextBlock Style="{StaticResource BodyText}" Margin="0,10,0,0" HorizontalAlignment="Center" TextWrapping="Wrap"
+                         Visibility="{Binding ShowCertificateLinkedToAccount, Converter={StaticResource BoolVis}}">
+                <Run Text="Saved to "/>
+                <Run Text="{Binding LinkedAccountName}" FontWeight="SemiBold"/>
+                <Run Text=". View it anytime in your Certronx account."/>
+              </TextBlock>
             </StackPanel>
           </Border>
           <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
@@ -554,9 +818,9 @@
           <Border Style="{StaticResource CardBorder}" Margin="0,0,0,20">
             <StackPanel>
               <TextBlock Style="{StaticResource BodyText}"
-                         Text="You can keep VerifyTech Agent installed for future certifications, or remove it now."/>
+                         Text="You can keep Certronx Agent installed for future certifications, or remove it now."/>
               <TextBlock Style="{StaticResource BodyText}" Margin="0,12,0,0"
-                         Text="To uninstall later: Windows Settings → Apps → VerifyTech Agent."/>
+                         Text="To uninstall later: Windows Settings → Apps → Certronx Agent."/>
             </StackPanel>
           </Border>
           <StackPanel Orientation="Horizontal">
@@ -569,7 +833,7 @@
       </Grid>
     </ScrollViewer>
 
-    <TextBlock Grid.Row="2" Text="VerifyTech · Hardware diagnostics only · TLS encrypted"
+    <TextBlock Grid.Row="2" Text="Certronx · Hardware diagnostics only · TLS encrypted"
                FontSize="11" Foreground="{StaticResource TextSecondaryBrush}" HorizontalAlignment="Center" Margin="0,18,0,0"/>
   </Grid>
 </Window>

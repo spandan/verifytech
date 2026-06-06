@@ -8,7 +8,7 @@ public static class DesktopRuntimeRequirement
         "https://dotnet.microsoft.com/en-us/download/dotnet/thank-you/runtime-desktop-8.0.17-windows-x64-installer";
 
     public static string MissingRuntimeMessage =>
-        "VerifyTech Agent requires the .NET 8 Desktop Runtime (x64).\n\n" +
+        "Certronx Agent requires the .NET 8 Desktop Runtime (x64).\n\n" +
         $"Download: {DownloadPageUrl}\n\n" +
-        "Install the runtime, then run VerifyTech Agent again.";
+        "Install the runtime, then run Certronx Agent again.";
 }
