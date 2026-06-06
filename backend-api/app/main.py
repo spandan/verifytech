@@ -6,12 +6,14 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, PlainTextResponse
 
 from app.api.routes import (
+    account,
     agents,
     auth_profile,
     certificates,
     dashboard,
     intake,
     reports,
+    reports_public,
     scan_sessions,
     tenants,
     verify,
@@ -44,8 +46,10 @@ app.add_middleware(
 )
 
 app.include_router(intake.router)
+app.include_router(account.router)
 app.include_router(agents.router)
 app.include_router(reports.router)
+app.include_router(reports_public.router)
 app.include_router(scan_sessions.router)
 app.include_router(certificates.router)
 app.include_router(verify.router)

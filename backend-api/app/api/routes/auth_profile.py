@@ -1,5 +1,6 @@
-from fastapi import APIRouter, Depends, Header, HTTPException
+from fastapi import APIRouter, Depends
 
+from app.auth.deps import AuthUser, get_current_user
 from app.db.models import Database, get_db
 from app.schemas.dto import AuthProfileResponse
 from app.services.tenant_service import TenantService
@@ -11,18 +12,13 @@ _tenant_service = TenantService()
 @router.get("", response_model=AuthProfileResponse)
 def get_auth_profile(
     db: Database = Depends(get_db),
-    x_user_id: str | None = Header(default=None),
-    x_user_email: str | None = Header(default=None),
+    user: AuthUser = Depends(get_current_user),
 ):
-    if not x_user_id:
-        raise HTTPException(status_code=401, detail="Authentication required")
-
-    profile = db.upsert_profile(x_user_id, email=x_user_email)
-
-    tenants = _tenant_service.get_user_tenants(db, x_user_id)
+    profile = db.upsert_profile(user.id, email=user.email)
+    tenants = _tenant_service.get_user_tenants(db, user.id)
     return AuthProfileResponse(
         id=profile.id,
-        email=profile.email or x_user_email,
+        email=profile.email or user.email,
         full_name=profile.full_name,
         tenants=tenants,
     )

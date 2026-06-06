@@ -20,9 +20,11 @@ from app.schemas.dto import (
 )
 from app.services.agent_report_adapter import agent_report_to_internal
 from app.services.audit_service import AuditService
+from app.services.account_service import AccountService
 from app.services.evidence_storage_service import EvidenceStorageService
 from app.services.inspection_report_service import InspectionReportService
 from app.services.report_service import ReportService
+from app.services.scan_report_service import ScanReportService
 
 
 class ScanSessionService:
@@ -31,6 +33,8 @@ class ScanSessionService:
         self._audit = AuditService()
         self._evidence = EvidenceStorageService()
         self._inspection = InspectionReportService()
+        self._scan_reports = ScanReportService()
+        self._account = AccountService()
 
     def start(self, db: Database, body: ScanSessionStartRequest) -> ScanSessionStartResponse:
         if body.platform.lower() != "windows":
@@ -44,17 +48,25 @@ class ScanSessionService:
         nonce = secrets.token_urlsafe(32)
         expires_at = datetime.now(timezone.utc) + timedelta(minutes=settings.scan_session_ttl_minutes)
 
-        db.create_scan_session(
-            {
-                "session_id": session_id,
-                "nonce": nonce,
-                "platform": body.platform.lower(),
-                "agent_version": body.agent_version,
-                "build_channel": body.build_channel,
-                "status": "started",
-                "expires_at": expires_at.isoformat(),
-            }
-        )
+        session_payload: dict[str, Any] = {
+            "session_id": session_id,
+            "nonce": nonce,
+            "platform": body.platform.lower(),
+            "agent_version": body.agent_version,
+            "build_channel": body.build_channel,
+            "status": "started",
+            "expires_at": expires_at.isoformat(),
+        }
+
+        if body.notification_email:
+            session_payload["notification_email"] = body.notification_email.strip().lower()
+
+        if body.account_link_token:
+            linked_user_id = self._account.resolve_scan_link_token(db, body.account_link_token, session_id)
+            if linked_user_id:
+                session_payload["user_id"] = linked_user_id
+
+        db.create_scan_session(session_payload)
 
         return ScanSessionStartResponse(
             session_id=session_id,
@@ -106,6 +118,7 @@ class ScanSessionService:
                 ReportSubmitRequest(
                     report=internal_report,
                     report_type="initial_certification",
+                    owner_user_id=session.user_id,
                 ),
             )
         except ValueError as exc:
@@ -135,7 +148,8 @@ class ScanSessionService:
         inspection = self._inspection.build(body.scan_data, evidence_manifest)
         bundle = body.scan_data.get("evidence_bundle") or {}
         provenance = bundle.get("build_provenance") if isinstance(bundle, dict) else None
-        if cert := db.get_certificate_by_code(result.certificate_code):
+        cert = db.get_certificate_by_code(result.certificate_code)
+        if cert:
             payload = dict(cert.public_payload_json or {})
             payload["inspection_report"] = inspection
             payload["agent_provenance"] = provenance
@@ -143,6 +157,49 @@ class ScanSessionService:
             db.client.table("certificates").update(
                 {"public_payload_json": payload, "condition_grade": inspection.get("certification_grade")}
             ).eq("id", cert.id).execute()
+
+        serial_hash, serial_last4 = self._scan_reports.extract_serial_fields(body.scan_data)
+        if result.device_id and (serial_hash or serial_last4):
+            device_updates: dict[str, Any] = {"updated_at": datetime.now(timezone.utc).isoformat()}
+            if serial_hash:
+                device_updates["serial_hash"] = serial_hash
+            if serial_last4:
+                device_updates["serial_last4"] = serial_last4
+            db.update_device(result.device_id, device_updates)
+
+        scan_report = self._scan_reports.create_from_scan(
+            db,
+            certificate_id=result.certificate_id or "",
+            device_id=result.device_id,
+            device_report_id=result.report_id,
+            verification_code=result.certificate_code or "",
+            scan_payload=body.scan_data,
+            report_summary=self._scan_reports.build_report_summary(
+                body.scan_data,
+                inspection,
+                cert.status if cert else "active",
+            ),
+            user_id=session.user_id,
+        )
+
+        if session.user_id and result.device_id:
+            self._account.associate_scan_with_user(
+                db,
+                user_id=session.user_id,
+                device_id=result.device_id,
+                scan_report=scan_report,
+            )
+
+        notify_email = session.notification_email
+        if session.user_id and not notify_email:
+            profile = db.get_profile(session.user_id)
+            notify_email = profile.email if profile else None
+        self._account.notify_scan_complete(
+            db,
+            scan_report=scan_report,
+            device=db.get_device(result.device_id) if result.device_id else None,
+            email=notify_email,
+        )
 
         db.update_scan_session(
             session_id,
@@ -181,6 +238,8 @@ class ScanSessionService:
             report_url=report_url,
             verification_url=report_url,
             qr_code_url=qr_url,
+            scan_report_id=scan_report.id,
+            public_report_token=scan_report.public_report_token,
         )
 
     def _validate_scan_timing(self, started: datetime, completed: datetime) -> None:

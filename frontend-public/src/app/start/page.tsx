@@ -127,6 +127,13 @@ export default function StartPage() {
         <button type="submit" disabled={loading} className="btn btn-trust btn-block">
           {loading ? "Saving…" : "Continue to download"}
         </button>
+
+        <p className="text-center text-sm text-muted">
+          Want to save reports later?{" "}
+          <a href="/login?next=/download" className="text-[var(--color-trust)] hover:underline">
+            Sign in to save reports
+          </a>
+        </p>
       </form>
     </div>
   );

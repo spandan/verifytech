@@ -95,6 +95,9 @@ class Device:
     model: str | None = None
     device_type: str | None = None
     platform: str | None = None
+    nickname: str | None = None
+    serial_hash: str | None = None
+    serial_last4: str | None = None
     created_at: datetime | None = None
     updated_at: datetime | None = None
 
@@ -109,6 +112,9 @@ class Device:
             model=row.get("model"),
             device_type=row.get("device_type"),
             platform=row.get("platform"),
+            nickname=row.get("nickname"),
+            serial_hash=row.get("serial_hash"),
+            serial_last4=row.get("serial_last4"),
             created_at=_parse_dt(row.get("created_at")),
             updated_at=_parse_dt(row.get("updated_at")),
         )
@@ -318,6 +324,8 @@ class ScanSession:
     verification_url: str | None = None
     qr_code_url: str | None = None
     rejection_reason: str | None = None
+    user_id: str | None = None
+    notification_email: str | None = None
     created_at: datetime | None = None
 
     @classmethod
@@ -342,7 +350,42 @@ class ScanSession:
             verification_url=row.get("verification_url"),
             qr_code_url=row.get("qr_code_url"),
             rejection_reason=row.get("rejection_reason"),
+            user_id=row.get("user_id"),
+            notification_email=row.get("notification_email"),
             created_at=_parse_dt(row.get("created_at")),
+        )
+
+
+@dataclass
+class ScanReport:
+    id: str
+    device_id: str | None = None
+    user_id: str | None = None
+    certificate_id: str | None = None
+    device_report_id: str | None = None
+    verification_code: str = ""
+    public_report_token: str = ""
+    scan_payload: dict[str, Any] = field(default_factory=dict)
+    report_summary: dict[str, Any] | None = None
+    status: str = "completed"
+    created_at: datetime | None = None
+    updated_at: datetime | None = None
+
+    @classmethod
+    def from_row(cls, row: dict[str, Any]) -> ScanReport:
+        return cls(
+            id=str(row["id"]),
+            device_id=row.get("device_id"),
+            user_id=row.get("user_id"),
+            certificate_id=row.get("certificate_id"),
+            device_report_id=row.get("device_report_id"),
+            verification_code=row.get("verification_code", ""),
+            public_report_token=row.get("public_report_token", ""),
+            scan_payload=row.get("scan_payload") or {},
+            report_summary=row.get("report_summary"),
+            status=row.get("status", "completed"),
+            created_at=_parse_dt(row.get("created_at")),
+            updated_at=_parse_dt(row.get("updated_at")),
         )
 
 

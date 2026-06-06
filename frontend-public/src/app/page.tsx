@@ -1,21 +1,20 @@
 import { Button } from "@/components/Button";
-import { OSDetector } from "@/components/OSDetector";
 
 const STEPS = [
   {
     step: "1",
-    title: "Scan device",
-    desc: "Download the agent and run a quick diagnostic on the device you want to certify.",
+    title: "Scan this laptop",
+    desc: "Download the scanner and run a quick diagnostic — no account required.",
   },
   {
     step: "2",
-    title: "Generate certificate",
-    desc: "Receive a shareable certificate with identity, condition grade, and test results.",
+    title: "Get your report",
+    desc: "Receive a verification code and shareable report link when the scan completes.",
   },
   {
     step: "3",
-    title: "Buyer verifies later",
-    desc: "Buyers enter your certificate code and confirm the device matches before they buy.",
+    title: "Save to your account",
+    desc: "Sign in with email to keep laptops and reports in one place — optional.",
   },
 ];
 
@@ -24,31 +23,26 @@ export default function HomePage() {
     <>
       <section className="page-container pb-8 pt-16 md:pt-20">
         <div className="mx-auto max-w-2xl text-center">
-          <OSDetector />
-          <h1 className="mt-6 text-3xl font-semibold tracking-tight md:text-4xl">
-            Certify and verify used devices with confidence
+          <h1 className="text-3xl font-semibold tracking-tight md:text-4xl">
+            Scan, verify, and save your laptop reports
           </h1>
           <p className="page-subtitle mx-auto mt-4 max-w-lg">
-            A trusted passport for laptops and electronics — share proof of identity and
-            condition, and let buyers verify before they purchase.
+            Run a quick hardware scan with no account required. Sign in anytime to save scanned
+            laptops to your account and access reports without carrying verification codes.
           </p>
-
-          <div className="hero-trust-badge mx-auto mt-8">
-            <span>Hardware identity</span>
-            <span className="text-muted">•</span>
-            <span>Condition checks</span>
-            <span className="text-muted">•</span>
-            <span>Buyer verification</span>
-          </div>
 
           <div className="mt-10 flex flex-wrap items-center justify-center gap-3">
             <Button href="/start" variant="trust">
-              Start certification
+              Scan this laptop
             </Button>
-            <Button href="/verify" variant="secondary">
-              Verify a certificate
+            <Button href="/login" variant="secondary">
+              Sign in to save reports
             </Button>
           </div>
+
+          <p className="mt-4 text-sm text-secondary">
+            Save scanned laptops to your account and access reports anytime.
+          </p>
         </div>
       </section>
 

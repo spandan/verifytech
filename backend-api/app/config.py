@@ -43,6 +43,16 @@ class Settings(BaseSettings):
     scan_session_max_duration_hours: int = 2
     allowed_agent_versions: str = "0.1.0,0.2.0,1.0.0,2.0.0,2.1.0,2.3.0"
 
+    # Supabase Auth JWT validation (Project Settings → API → JWT Secret)
+    supabase_jwt_secret: str = ""
+
+    # Transactional email (optional — logs in DEBUG when unset)
+    resend_api_key: str = ""
+    email_from: str = ""
+
+    # Feature flags
+    marketplace_listings_enabled: bool = False
+
     @property
     def allowed_agent_version_list(self) -> list[str]:
         return [v.strip() for v in self.allowed_agent_versions.split(",") if v.strip()]

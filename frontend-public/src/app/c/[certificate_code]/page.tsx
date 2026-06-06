@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { CertificateCard } from "@/components/CertificateCard";
 import { InspectionReport } from "@/components/InspectionReport";
+import { SaveLaptopPanel } from "@/components/SaveLaptopPanel";
 import { ShareButton } from "@/components/ShareButton";
 import { api } from "@/lib/api";
 import { env } from "@/lib/env";
@@ -31,6 +32,8 @@ export default async function CertificatePage({ params }: Props) {
       {cert.inspection_report && (
         <InspectionReport report={cert.inspection_report} />
       )}
+
+      <SaveLaptopPanel verificationCode={cert.certificate_code} deviceName={cert.device_name} />
 
       <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
         <Link

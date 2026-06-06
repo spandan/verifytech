@@ -51,7 +51,18 @@ public sealed class ApiClient : IDisposable
         string buildChannel,
         CancellationToken ct = default)
     {
-        var body = new { agent_version = agentVersion, platform = "windows", build_channel = buildChannel };
+        var linkToken = Environment.GetEnvironmentVariable("VERIFYTECH_ACCOUNT_LINK_TOKEN");
+        var notifyEmail = Environment.GetEnvironmentVariable("VERIFYTECH_NOTIFICATION_EMAIL");
+        var body = new Dictionary<string, object?>
+        {
+            ["agent_version"] = agentVersion,
+            ["platform"] = "windows",
+            ["build_channel"] = buildChannel,
+        };
+        if (!string.IsNullOrWhiteSpace(linkToken))
+            body["account_link_token"] = linkToken.Trim();
+        if (!string.IsNullOrWhiteSpace(notifyEmail))
+            body["notification_email"] = notifyEmail.Trim();
         var response = await SendWithRetryAsync(
             () => _http.PostAsJsonAsync("api/scan-sessions/start", body, JsonOptions, ct),
             ct);

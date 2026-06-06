@@ -1,6 +1,8 @@
 -- DevicePassport / VerifyTech — complete Supabase schema
--- Run once in the Supabase SQL editor on a fresh project.
--- Tenant-aware: tenant_id nullable for consumer/anonymous flows
+-- Run once in the Supabase SQL editor on a fresh project (or after reset.sql).
+-- Includes: tenants, devices, certificates, scan sessions, account/scan_reports, storage, RLS.
+--
+-- Existing project already on an older schema? Run database/upgrade.sql instead.
 
 -- ─── Extensions ─────────────────────────────────────────────────────────────
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
@@ -64,12 +66,16 @@ CREATE TABLE devices (
     model TEXT,
     device_type TEXT,
     platform TEXT,
+    nickname TEXT,
+    serial_hash TEXT,
+    serial_last4 TEXT,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 CREATE INDEX idx_devices_identity_hash ON devices(identity_hash);
 CREATE INDEX idx_devices_tenant_id ON devices(tenant_id);
+CREATE INDEX idx_devices_owner_user_id ON devices(owner_user_id);
 
 -- ─── Device Reports ───────────────────────────────────────────────────────
 CREATE TYPE report_type AS ENUM (
@@ -251,11 +257,55 @@ CREATE TABLE scan_sessions (
     verification_url TEXT,
     qr_code_url TEXT,
     rejection_reason TEXT,
+    user_id UUID REFERENCES profiles(id) ON DELETE SET NULL,
+    notification_email TEXT,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 CREATE INDEX idx_scan_sessions_status ON scan_sessions(status);
 CREATE INDEX idx_scan_sessions_expires_at ON scan_sessions(expires_at);
+
+-- ─── Scan reports (account layer; links to certificates) ───────────────────
+CREATE TABLE scan_reports (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    device_id UUID REFERENCES devices(id) ON DELETE SET NULL,
+    user_id UUID REFERENCES profiles(id) ON DELETE SET NULL,
+    certificate_id UUID REFERENCES certificates(id) ON DELETE SET NULL,
+    device_report_id UUID REFERENCES device_reports(id) ON DELETE SET NULL,
+    verification_code TEXT NOT NULL UNIQUE,
+    public_report_token TEXT NOT NULL UNIQUE,
+    scan_payload JSONB NOT NULL DEFAULT '{}',
+    report_summary JSONB,
+    status TEXT NOT NULL DEFAULT 'completed',
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX idx_scan_reports_user_id ON scan_reports(user_id);
+CREATE INDEX idx_scan_reports_device_id ON scan_reports(device_id);
+CREATE INDEX idx_scan_reports_public_token ON scan_reports(public_report_token);
+
+CREATE TABLE report_claims (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    scan_report_id UUID NOT NULL REFERENCES scan_reports(id) ON DELETE CASCADE,
+    user_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+    claimed_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    UNIQUE (scan_report_id, user_id)
+);
+
+CREATE INDEX idx_report_claims_user_id ON report_claims(user_id);
+
+-- Short-lived token so logged-in web users can link agent scans to their account
+CREATE TABLE account_scan_link_tokens (
+    token TEXT PRIMARY KEY,
+    user_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+    expires_at TIMESTAMPTZ NOT NULL,
+    used_at TIMESTAMPTZ,
+    scan_session_id TEXT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX idx_account_scan_link_tokens_user_id ON account_scan_link_tokens(user_id);
 
 -- ─── Certification evidence storage (Supabase Storage) ───────────────────
 INSERT INTO storage.buckets (id, name, public, file_size_limit)
@@ -296,6 +346,50 @@ ALTER TABLE certificates ENABLE ROW LEVEL SECURITY;
 ALTER TABLE verification_attempts ENABLE ROW LEVEL SECURITY;
 ALTER TABLE intake_responses ENABLE ROW LEVEL SECURITY;
 ALTER TABLE scan_sessions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE scan_reports ENABLE ROW LEVEL SECURITY;
+ALTER TABLE report_claims ENABLE ROW LEVEL SECURITY;
+
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+    INSERT INTO public.profiles (id, email, created_at, updated_at)
+    VALUES (NEW.id, NEW.email, NOW(), NOW())
+    ON CONFLICT (id) DO UPDATE
+    SET email = COALESCE(EXCLUDED.email, profiles.email),
+        updated_at = NOW();
+    RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
+CREATE TRIGGER on_auth_user_created
+    AFTER INSERT ON auth.users
+    FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
+
+DROP POLICY IF EXISTS "Users read own devices" ON devices;
+CREATE POLICY "Users read own devices"
+    ON devices FOR SELECT TO authenticated
+    USING (owner_user_id = auth.uid());
+
+DROP POLICY IF EXISTS "Users update own devices" ON devices;
+CREATE POLICY "Users update own devices"
+    ON devices FOR UPDATE TO authenticated
+    USING (owner_user_id = auth.uid())
+    WITH CHECK (owner_user_id = auth.uid());
+
+DROP POLICY IF EXISTS "Users read own scan reports" ON scan_reports;
+CREATE POLICY "Users read own scan reports"
+    ON scan_reports FOR SELECT TO authenticated
+    USING (user_id = auth.uid());
+
+DROP POLICY IF EXISTS "Users read own report claims" ON report_claims;
+CREATE POLICY "Users read own report claims"
+    ON report_claims FOR SELECT TO authenticated
+    USING (user_id = auth.uid());
 
 -- Public read on active certificates via certificate_code (handled by backend API)
 -- Service role used by backend-api for all writes

@@ -1,18 +1,22 @@
 import { env } from "@/lib/env";
+import { getAccessToken } from "@/lib/supabase";
 
 const API_BASE = env.apiUrl;
 
-async function request<T>(path: string, options?: RequestInit): Promise<T> {
-  const res = await fetch(`${API_BASE}${path}`, {
-    ...options,
-    headers: {
-      "Content-Type": "application/json",
-      ...options?.headers,
-    },
-  });
+async function request<T>(path: string, options?: RequestInit, auth = false): Promise<T> {
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    ...(options?.headers as Record<string, string> | undefined),
+  };
+  if (auth) {
+    const token = await getAccessToken();
+    if (token) headers.Authorization = `Bearer ${token}`;
+  }
+  const res = await fetch(`${API_BASE}${path}`, { ...options, headers });
   if (!res.ok) {
     const err = await res.json().catch(() => ({ detail: res.statusText }));
-    throw new Error(err.detail || "Request failed");
+    const detail = err.detail;
+    throw new Error(typeof detail === "string" ? detail : "Request failed");
   }
   return res.json();
 }
@@ -113,6 +117,20 @@ export interface VerificationResult {
   device_name?: string;
 }
 
+export interface MyLaptop {
+  device_id: string;
+  nickname?: string | null;
+  device_name: string;
+  manufacturer?: string | null;
+  model?: string | null;
+  serial_last4?: string | null;
+  last_scan_at?: string | null;
+  verification_status: string;
+  verification_code: string;
+  public_report_url: string;
+  report_token?: string | null;
+}
+
 export const api = {
   detectPlatform: () => request<{ platform: string }>("/api/agents/detect"),
   getAgent: (platform: string) => request<AgentInfo>(`/api/agents/${platform}`),
@@ -130,4 +148,24 @@ export const api = {
     }),
   getVerificationAttempt: (id: string) =>
     request<VerificationResult>(`/api/verify/attempts/${id}`),
+  getMyLaptops: () => request<{ laptops: MyLaptop[] }>("/api/account/laptops", undefined, true),
+  createScanLinkToken: () =>
+    request<{ token: string; expires_at: string }>("/api/account/scan-link-token", { method: "POST" }, true),
+  renameDevice: (deviceId: string, nickname: string) =>
+    request<MyLaptop>(
+      `/api/account/devices/${deviceId}`,
+      { method: "PATCH", body: JSON.stringify({ nickname }) },
+      true,
+    ),
+  claimReport: (verificationCode: string) =>
+    request<{ device_id: string; verification_code: string; public_report_url: string; message: string }>(
+      "/api/account/reports/claim",
+      { method: "POST", body: JSON.stringify({ verification_code: verificationCode }) },
+      true,
+    ),
+  emailReport: (verificationCode: string, email: string) =>
+    request<{ sent: boolean }>(
+      "/api/account/reports/email",
+      { method: "POST", body: JSON.stringify({ verification_code: verificationCode, email }) },
+    ),
 };

@@ -316,6 +316,7 @@ body {
 .alert-success { background: var(--color-success-bg); border-color: #bbf7d0; color: var(--color-success-text); }
 .alert-warning { background: var(--color-warning-bg); border-color: #fde68a; color: var(--color-warning-text); }
 .alert-error { background: var(--color-error-bg); border-color: #fecaca; color: var(--color-error-text); }
+.alert-info { background: var(--color-info-bg); border-color: #bfdbfe; color: var(--color-info-text); }
 
 .result-banner {
   border-radius: var(--radius-xl);

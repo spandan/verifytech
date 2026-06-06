@@ -136,6 +136,8 @@ class ScanSessionStartRequest(BaseModel):
     agent_version: str = Field(min_length=1, max_length=32)
     platform: str = "windows"
     build_channel: str = "production"
+    account_link_token: Optional[str] = None
+    notification_email: Optional[str] = None
 
 
 class ScanSessionStartResponse(BaseModel):
@@ -171,6 +173,8 @@ class ScanSessionSubmitResponse(BaseModel):
     report_url: str
     verification_url: Optional[str] = None
     qr_code_url: Optional[str] = None
+    scan_report_id: Optional[str] = None
+    public_report_token: Optional[str] = None
 
 
 # ─── Verification ─────────────────────────────────────────────────────────────
@@ -245,3 +249,55 @@ class AuthProfileResponse(BaseModel):
     email: Optional[str] = None
     full_name: Optional[str] = None
     tenants: list[TenantResponse] = Field(default_factory=list)
+
+
+# ─── Account / My Laptops ────────────────────────────────────────────────────
+
+class ScanLinkTokenResponse(BaseModel):
+    token: str
+    expires_at: datetime
+
+
+class MyLaptopSummary(BaseModel):
+    device_id: str
+    nickname: Optional[str] = None
+    device_name: str
+    manufacturer: Optional[str] = None
+    model: Optional[str] = None
+    serial_last4: Optional[str] = None
+    last_scan_at: Optional[datetime] = None
+    verification_status: str
+    verification_code: str
+    public_report_url: str
+    report_token: Optional[str] = None
+
+
+class MyLaptopsResponse(BaseModel):
+    laptops: list[MyLaptopSummary] = Field(default_factory=list)
+
+
+class RenameDeviceRequest(BaseModel):
+    nickname: str = Field(min_length=1, max_length=80)
+
+
+class ClaimReportRequest(BaseModel):
+    verification_code: str = Field(min_length=4, max_length=20)
+
+
+class ClaimReportResponse(BaseModel):
+    device_id: str
+    verification_code: str
+    public_report_url: str
+    message: str
+
+
+class SendReportEmailRequest(BaseModel):
+    verification_code: str = Field(min_length=4, max_length=20)
+    email: str = Field(min_length=3, max_length=320)
+
+
+class PublicScanReportResponse(BaseModel):
+    verification_code: str
+    public_report_url: str
+    report_summary: Optional[dict[str, Any]] = None
+    certificate: Optional[CertificatePublicResponse] = None

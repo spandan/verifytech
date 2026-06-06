@@ -12,6 +12,7 @@ from app.db.records import (
     Tenant,
     TenantUser,
     ScanSession,
+    ScanReport,
     VerificationAttempt,
 )
 from app.db.repository import Database, get_db, init_db
@@ -29,6 +30,7 @@ __all__ = [
     "Tenant",
     "TenantUser",
     "ScanSession",
+    "ScanReport",
     "VerificationAttempt",
     "get_db",
     "init_db",

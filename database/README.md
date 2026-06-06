@@ -1,11 +1,19 @@
 # VerifyTech database
 
-PostgreSQL schema for Supabase (`database/schema.sql`).
+PostgreSQL schema for Supabase. Three SQL files — no separate migrations folder.
 
 ## Fresh project (first time)
 
 1. Create a Supabase project.
-2. Run `schema.sql` in **Supabase → SQL Editor**.
+2. Run **`schema.sql`** in **Supabase → SQL Editor**.
+
+## Upgrade existing project (keep data)
+
+If you already ran an older `schema.sql` and need account tables (`scan_reports`, magic-link profiles, etc.):
+
+1. Run **`upgrade.sql`** in the SQL Editor (idempotent — safe to re-run).
+
+Do **not** run full `schema.sql` on a populated database (it will fail on existing tables).
 
 ## Full reset (wipe app data + recreate schema)
 
@@ -55,6 +63,8 @@ Backups are written to `database/backups/verifytech-YYYYMMDD-HHMMSS.sql`.
 2. Run `database/reset.sql` in the SQL Editor.
 3. Run `database/schema.sql` in the SQL Editor.
 
+To upgrade without wiping data, run `database/upgrade.sql` instead of steps 2–3.
+
 Or use only SQL (tables reset but orphaned storage files may remain):
 
 ```bash
@@ -73,6 +83,7 @@ Or use only SQL (tables reset but orphaned storage files may remain):
 
 | File | Purpose |
 |------|---------|
-| `schema.sql` | Full schema + storage buckets + seed agent row |
-| `reset.sql` | Teardown only (run before `schema.sql`) |
+| `schema.sql` | Full schema (fresh install or after `reset.sql`) |
+| `reset.sql` | Teardown only — run before `schema.sql` |
+| `upgrade.sql` | Idempotent incremental upgrade for existing databases |
 | `backups/` | Auto-created SQL dumps from reset script |

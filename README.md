@@ -170,7 +170,7 @@ Windows agent binaries live in the private **`agent-releases`** bucket.
 - The frontend still only calls the API; no Supabase credentials in the browser
 - Local dev fallback: paths starting with `/agents/` serve from the API
 
-Run migration `database/schema.sql` if setting up a new project. If you previously used separate migration files, your database is already up to date — no need to re-run.
+Run `database/schema.sql` if setting up a new project. Upgrading an existing database? Run `database/upgrade.sql` instead.
 
 Upload a release after building on Windows:
 

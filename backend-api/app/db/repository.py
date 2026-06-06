@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from datetime import datetime, timezone
 from typing import Any
 from uuid import uuid4
 
@@ -19,6 +20,7 @@ from app.db.records import (
     Tenant,
     TenantUser,
     ScanSession,
+    ScanReport,
     VerificationAttempt,
 )
 from app.db.supabase_client import get_supabase_admin
@@ -263,6 +265,57 @@ class Database:
 
     def update_scan_session(self, session_id: str, updates: dict[str, Any]) -> None:
         self.client.table("scan_sessions").update(updates).eq("session_id", session_id).execute()
+
+    # ── Scan reports & account ───────────────────────────────────────────────
+
+    def create_scan_report(self, payload: dict[str, Any]) -> ScanReport:
+        payload = {"id": str(uuid4()), **payload}
+        row = self._insert("scan_reports", payload)
+        return ScanReport.from_row(row)
+
+    def get_scan_report(self, report_id: str) -> ScanReport | None:
+        row = self._first("scan_reports", id=report_id)
+        return ScanReport.from_row(row) if row else None
+
+    def get_scan_report_by_verification_code(self, code: str) -> ScanReport | None:
+        row = self._first("scan_reports", verification_code=code)
+        return ScanReport.from_row(row) if row else None
+
+    def get_scan_report_by_public_token(self, token: str) -> ScanReport | None:
+        row = self._first("scan_reports", public_report_token=token)
+        return ScanReport.from_row(row) if row else None
+
+    def get_scan_report_by_certificate_id(self, certificate_id: str) -> ScanReport | None:
+        row = self._first("scan_reports", certificate_id=certificate_id)
+        return ScanReport.from_row(row) if row else None
+
+    def get_scan_reports_for_user(self, user_id: str) -> list[ScanReport]:
+        result = (
+            self.client.table("scan_reports")
+            .select("*")
+            .eq("user_id", user_id)
+            .order("created_at", desc=True)
+            .execute()
+        )
+        return [ScanReport.from_row(row) for row in result.data or []]
+
+    def update_scan_report(self, report_id: str, updates: dict[str, Any]) -> None:
+        self.client.table("scan_reports").update(updates).eq("id", report_id).execute()
+
+    def create_report_claim(self, payload: dict[str, Any]) -> dict[str, Any]:
+        payload = {"id": str(uuid4()), **payload}
+        return self._insert("report_claims", payload)
+
+    def create_account_scan_link_token(self, payload: dict[str, Any]) -> dict[str, Any]:
+        return self._insert("account_scan_link_tokens", payload)
+
+    def get_account_scan_link_token(self, token: str) -> dict[str, Any] | None:
+        return self._first("account_scan_link_tokens", token=token)
+
+    def mark_account_scan_link_token_used(self, token: str, session_id: str) -> None:
+        self.client.table("account_scan_link_tokens").update(
+            {"used_at": datetime.now(timezone.utc).isoformat(), "scan_session_id": session_id}
+        ).eq("token", token).execute()
 
     # ── Audit ────────────────────────────────────────────────────────────────
 

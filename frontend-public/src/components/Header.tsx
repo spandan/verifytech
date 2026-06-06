@@ -1,5 +1,7 @@
 import Link from "next/link";
 
+import { HeaderNav } from "@/components/HeaderNav";
+
 export function Header() {
   return (
     <header className="site-header">
@@ -8,10 +10,7 @@ export function Header() {
           <span className="site-logo__mark">DP</span>
           <span>DevicePassport</span>
         </Link>
-        <nav className="site-nav flex items-center gap-6">
-          <Link href="/start">Certify device</Link>
-          <Link href="/verify">Verify</Link>
-        </nav>
+        <HeaderNav />
       </div>
     </header>
   );
