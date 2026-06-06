@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { FooterAuthLink } from "@/components/FooterAuthLink";
 import { HeaderNav } from "@/components/HeaderNav";
 
 export function Header() {
@@ -42,7 +43,7 @@ export function Footer() {
           <div>
             <p className="mb-3 text-sm font-medium">Company</p>
             <div className="site-footer__links">
-              <Link href="/login">Sign In</Link>
+              <FooterAuthLink />
               <Link href="/">About Certronx</Link>
             </div>
           </div>

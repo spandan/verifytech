@@ -21,7 +21,7 @@ function statusBadge(status: string): string {
 }
 
 export default function MyLaptopsPage() {
-  const { userId, loading: authLoading } = useAuth();
+  const { userId, loading: authLoading, refresh } = useAuth();
   const [laptops, setLaptops] = useState<MyLaptop[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -37,9 +37,14 @@ export default function MyLaptopsPage() {
     api
       .getMyLaptops()
       .then((data) => setLaptops(data.laptops))
-      .catch((e: Error) => setError(e.message))
+      .catch(async (e: Error) => {
+        if (e.message === "Authentication required") {
+          await refresh();
+        }
+        setError(e.message);
+      })
       .finally(() => setLoading(false));
-  }, [userId, authLoading]);
+  }, [userId, authLoading, refresh]);
 
   async function saveNickname(deviceId: string) {
     try {

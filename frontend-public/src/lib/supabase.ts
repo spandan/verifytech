@@ -13,6 +13,8 @@ export function getSupabaseClient(): SupabaseClient | null {
       auth: {
         flowType: "pkce",
         detectSessionInUrl: true,
+        persistSession: true,
+        autoRefreshToken: true,
       },
     });
   }
@@ -22,6 +24,17 @@ export function getSupabaseClient(): SupabaseClient | null {
 export async function getAccessToken(): Promise<string | null> {
   const supabase = getSupabaseClient();
   if (!supabase) return null;
-  const { data } = await supabase.auth.getSession();
-  return data.session?.access_token ?? null;
+
+  const { data, error } = await supabase.auth.getSession();
+  if (error || !data.session) return null;
+
+  const expiresAt = data.session.expires_at;
+  const now = Math.floor(Date.now() / 1000);
+  if (expiresAt && expiresAt <= now + 60) {
+    const { data: refreshed, error: refreshError } = await supabase.auth.refreshSession();
+    if (refreshError || !refreshed.session) return null;
+    return refreshed.session.access_token;
+  }
+
+  return data.session.access_token;
 }

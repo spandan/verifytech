@@ -507,7 +507,8 @@ body {
 .site-logo__name { font-size: 1rem; font-weight: 600; letter-spacing: -0.02em; line-height: 1; }
 .site-logo__tagline { font-size: 0.6875rem; color: var(--color-text-muted); letter-spacing: 0.02em; }
 
-.site-nav { display: flex; align-items: center; gap: var(--space-5); }
+/* Display toggled via Tailwind (hidden lg:flex) on HeaderNav */
+.site-nav { align-items: center; gap: var(--space-5); }
 .site-nav a, .site-nav button {
   font-size: 0.875rem;
   color: var(--color-text-secondary);

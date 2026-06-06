@@ -1,9 +1,14 @@
 import { env } from "@/lib/env";
-import { getAccessToken } from "@/lib/supabase";
+import { getAccessToken, getSupabaseClient } from "@/lib/supabase";
 
 const API_BASE = env.apiUrl;
 
-async function request<T>(path: string, options?: RequestInit, auth = false): Promise<T> {
+async function request<T>(
+  path: string,
+  options?: RequestInit,
+  auth = false,
+  retried = false,
+): Promise<T> {
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
     ...(options?.headers as Record<string, string> | undefined),
@@ -13,6 +18,15 @@ async function request<T>(path: string, options?: RequestInit, auth = false): Pr
     if (token) headers.Authorization = `Bearer ${token}`;
   }
   const res = await fetch(`${API_BASE}${path}`, { ...options, headers });
+  if (res.status === 401 && auth && !retried) {
+    const supabase = getSupabaseClient();
+    if (supabase) {
+      const { data, error } = await supabase.auth.refreshSession();
+      if (!error && data.session) {
+        return request(path, options, auth, true);
+      }
+    }
+  }
   if (!res.ok) {
     const err = await res.json().catch(() => ({ detail: res.statusText }));
     const detail = err.detail;
