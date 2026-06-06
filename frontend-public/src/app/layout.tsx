@@ -8,9 +8,9 @@ const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
 const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "DevicePassport — Certify & Verify Used Electronics",
+  title: "Certronx — Trusted Devices. Verified History.",
   description:
-    "Certify and verify used devices with confidence. Trusted hardware identity, condition checks, and buyer verification.",
+    "Certify. Verify. Rehome. Certronx is the trust platform for used electronics — help sellers prove condition and buyers purchase with confidence.",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

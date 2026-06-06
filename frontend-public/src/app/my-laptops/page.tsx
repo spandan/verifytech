@@ -58,9 +58,9 @@ export default function MyLaptopsPage() {
   if (!userId) {
     return (
       <div className="page-container page-container--narrow py-16 text-center">
-        <h1 className="page-title">My Laptops</h1>
-        <p className="page-subtitle mt-2">Sign in to see saved scan reports.</p>
-        <Link href="/login?next=/my-laptops" className="btn btn-trust mt-8 inline-flex">
+        <h1 className="page-title">My Devices</h1>
+        <p className="page-subtitle mt-2">Sign in to access your Certronx certification reports.</p>
+        <Link href="/login?next=/my-laptops" className="btn btn-brand mt-8 inline-flex">
           Sign in with email
         </Link>
       </div>
@@ -71,12 +71,12 @@ export default function MyLaptopsPage() {
     <div className="page-container py-10">
       <header className="mb-8 flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="page-title">My Laptops</h1>
-          <p className="page-subtitle mt-1">Saved scans and verification reports in one place.</p>
+          <h1 className="page-title">My Devices</h1>
+          <p className="page-subtitle mt-1">Your certified devices and verification reports.</p>
         </div>
-        <Link href="/start" className="btn btn-trust">
-          Scan another laptop
-        </Link>
+          <Link href="/download" className="btn btn-brand">
+            Certify a device
+          </Link>
       </header>
 
       {error && <p className="mb-4 text-sm text-[var(--color-error)]">{error}</p>}
@@ -87,8 +87,8 @@ export default function MyLaptopsPage() {
           <p className="mt-2 text-sm text-muted">
             Scan a laptop, then save it to your account with your verification code.
           </p>
-          <Link href="/start" className="btn btn-trust mt-6 inline-flex">
-            Scan this laptop
+          <Link href="/download" className="btn btn-brand mt-6 inline-flex">
+            Certify a device
           </Link>
         </div>
       ) : (
@@ -140,7 +140,7 @@ export default function MyLaptopsPage() {
                   </div>
                 </div>
                 <div className="flex flex-wrap gap-2">
-                  <Link href={`/c/${laptop.verification_code}`} className="btn btn-trust text-sm">
+                  <Link href={`/c/${laptop.verification_code}`} className="btn btn-brand text-sm">
                     View Report
                   </Link>
                   <button

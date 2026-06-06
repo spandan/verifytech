@@ -44,7 +44,8 @@ function LoginForm() {
         <div>
           <h1 className="page-title">Sign in with email</h1>
           <p className="page-subtitle mt-2">
-            No password needed. We&apos;ll email you a secure link to access your saved laptops.
+            No password needed. We&apos;ll send a secure magic link to access your Certronx reports and
+            devices.
           </p>
         </div>
 
@@ -68,7 +69,7 @@ function LoginForm() {
               placeholder="you@example.com"
             />
           </label>
-          <button type="submit" className="btn btn-trust btn-block" disabled={status === "sending"}>
+          <button type="submit" className="btn btn-brand btn-block" disabled={status === "sending"}>
             {status === "sending" ? "Sending…" : "Send magic link"}
           </button>
         </form>
@@ -81,8 +82,8 @@ function LoginForm() {
 
         <p className="text-center text-sm text-muted">
           Just scanning?{" "}
-          <Link href="/start" className="text-[var(--color-trust)] hover:underline">
-            Scan this laptop without signing in
+          <Link href="/download" className="text-[var(--color-brand)] hover:underline">
+            Certify a device without signing in
           </Link>
         </p>
       </div>

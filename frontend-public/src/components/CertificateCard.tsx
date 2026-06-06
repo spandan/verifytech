@@ -27,7 +27,7 @@ export function CertificateCard({ cert }: { cert: CertificatePublic }) {
   return (
     <article className="card card--certificate">
       <div className="card-cert-header">
-        <span>DevicePassport Certified</span>
+        <span>Certronx Certified</span>
         <span className={`badge ${statusBadgeClass(cert.status)} !bg-white/95`}>
           {cert.status}
         </span>

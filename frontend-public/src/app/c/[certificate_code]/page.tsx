@@ -38,9 +38,9 @@ export default async function CertificatePage({ params }: Props) {
       <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
         <Link
           href={`/verify?code=${cert.certificate_code}`}
-          className="btn btn-trust"
+          className="btn btn-brand"
         >
-          Verify this device
+          Verify this certification
         </Link>
         <ShareButton url={shareUrl} />
       </div>

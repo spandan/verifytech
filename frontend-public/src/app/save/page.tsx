@@ -41,10 +41,10 @@ function SaveForm() {
   return (
     <div className="card card-body space-y-6">
       <div>
-        <h1 className="page-title">Save this laptop to your account</h1>
+        <h1 className="page-title">Save this report</h1>
         <p className="page-subtitle mt-2">
-          Enter the verification code from your scan report. If you&apos;re not signed in, we&apos;ll
-          send you a magic link first.
+          Enter your Certronx certification code. If you&apos;re not signed in, we&apos;ll send a
+          magic link first.
         </p>
       </div>
 
@@ -65,8 +65,8 @@ function SaveForm() {
             className="mt-2 w-full rounded-lg border border-[var(--color-border)] bg-white px-3 py-2 font-mono"
           />
         </label>
-        <button type="submit" className="btn btn-trust btn-block" disabled={status === "saving"}>
-          {userId ? "Save this laptop" : "Sign in and save"}
+        <button type="submit" className="btn btn-brand btn-block" disabled={status === "saving"}>
+          {userId ? "Save this report" : "Sign in and save"}
         </button>
       </form>
 
@@ -77,8 +77,8 @@ function SaveForm() {
       )}
 
       <p className="text-center text-sm text-muted">
-        <Link href="/my-laptops" className="text-[var(--color-trust)] hover:underline">
-          View My Laptops
+        <Link href="/my-laptops" className="text-[var(--color-brand)] hover:underline">
+          View My Devices
         </Link>
       </p>
     </div>
