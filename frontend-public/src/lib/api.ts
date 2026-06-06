@@ -15,7 +15,10 @@ async function request<T>(
   };
   if (auth) {
     const token = await getAccessToken();
-    if (token) headers.Authorization = `Bearer ${token}`;
+    if (!token) {
+      throw new Error("Session expired. Please sign in again.");
+    }
+    headers.Authorization = `Bearer ${token}`;
   }
   const res = await fetch(`${API_BASE}${path}`, { ...options, headers });
   if (res.status === 401 && auth && !retried) {

@@ -84,7 +84,19 @@ export default function MyLaptopsPage() {
           </Link>
       </header>
 
-      {error && <p className="mb-4 text-sm text-[var(--color-error)]">{error}</p>}
+      {error && (
+        <p className="mb-4 text-sm text-[var(--color-error)]">
+          {error}
+          {(error === "Authentication required" || error.includes("Session expired")) && (
+            <>
+              {" "}
+              <Link href="/login?next=/my-laptops" className="text-[var(--color-brand)] hover:underline">
+                Sign in again
+              </Link>
+            </>
+          )}
+        </p>
+      )}
 
       {laptops.length === 0 ? (
         <div className="empty-state">
