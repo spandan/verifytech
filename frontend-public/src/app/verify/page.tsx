@@ -48,7 +48,7 @@ function VerifyForm() {
   }
 
   function handleViewReport() {
-    router.push(`/c/${code.trim().toUpperCase()}`);
+    router.push(`/verify/${code.trim().toUpperCase()}`);
   }
 
   return (

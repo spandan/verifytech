@@ -5,7 +5,7 @@ import Link from "next/link";
 
 import { api, type MyLaptop } from "@/lib/api";
 import { useAuth } from "@/lib/auth-context";
-import { env } from "@/lib/env";
+import { buildVerificationUrl } from "@/lib/certification-summary";
 
 function statusBadge(status: string): string {
   switch (status) {
@@ -164,9 +164,7 @@ export default function MyLaptopsPage() {
                     type="button"
                     className="btn btn-secondary text-sm"
                     onClick={() => {
-                      const url = laptop.public_report_url.startsWith("http")
-                        ? laptop.public_report_url
-                        : `${env.siteUrl}${laptop.public_report_url}`;
+                      const url = buildVerificationUrl(laptop.verification_code);
                       void navigator.clipboard.writeText(url);
                     }}
                   >

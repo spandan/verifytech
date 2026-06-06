@@ -1,5 +1,8 @@
 import type { CertificatePublic } from "@/lib/api";
-import { QRCodeSVG } from "qrcode.react";
+import { buildCertificationSummary } from "@/lib/certification-summary";
+
+import { ConditionBadge, ScoreDisplay } from "@/components/ConditionBadge";
+import { VerificationQrCode } from "@/components/VerificationQrCode";
 
 const LEVEL_LABELS: Record<string, string> = {
   identity_verified: "Identity Verified",
@@ -21,6 +24,7 @@ function statusBadgeClass(status: string): string {
 }
 
 export function CertificateCard({ cert }: { cert: CertificatePublic }) {
+  const summary = buildCertificationSummary(cert);
   const testsPassed = cert.core_tests_passed.length;
   const testsTotal = cert.core_tests_total;
 
@@ -45,29 +49,41 @@ export function CertificateCard({ cert }: { cert: CertificatePublic }) {
               </p>
             </header>
 
+            <div className="flex flex-wrap items-center gap-3">
+              <ConditionBadge score={summary.overallScore} label={summary.condition} />
+              <ScoreDisplay score={summary.overallScore} />
+            </div>
+
             <div className="flex flex-wrap gap-2">
               <span className="badge badge-trust">
                 {LEVEL_LABELS[cert.certificate_level] || cert.certificate_level}
               </span>
-              {cert.condition_grade && (
-                <span className="badge badge-info">Grade {cert.condition_grade}</span>
-              )}
             </div>
 
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
               <Metric label="Certificate ID" value={cert.certificate_code} mono />
+              <Metric label="CPU" value={summary.cpu} />
+              <Metric
+                label="RAM"
+                value={summary.ramGb > 0 ? `${summary.ramGb} GB` : "See report"}
+              />
+              <Metric
+                label="Storage"
+                value={
+                  summary.storageGb > 0
+                    ? `${summary.storageGb} GB ${summary.storageType}`
+                    : summary.storageType
+                }
+              />
               <Metric
                 label="Certified"
                 value={new Date(cert.certification_date).toLocaleDateString()}
               />
               <Metric label="Valid until" value={new Date(cert.expires_at).toLocaleDateString()} />
-              {cert.battery_health_percent != null && (
-                <Metric label="Battery health" value={`${cert.battery_health_percent}%`} />
-              )}
-              {cert.storage_health_percent != null && (
+              {summary.batteryHealthPercent != null && (
                 <Metric
-                  label="Storage health"
-                  value={`${Math.round(cert.storage_health_percent)}%`}
+                  label="Battery health"
+                  value={`${Math.round(summary.batteryHealthPercent)}%`}
                 />
               )}
               <Metric
@@ -80,30 +96,13 @@ export function CertificateCard({ cert }: { cert: CertificatePublic }) {
               />
             </div>
 
-            {testsPassed > 0 && (
-              <p className="text-sm text-secondary">
-                Interactive checks completed for{" "}
-                {cert.core_tests_passed.slice(0, 4).join(", ")}
-                {cert.core_tests_passed.length > 4
-                  ? `, and ${cert.core_tests_passed.length - 4} more`
-                  : ""}
-                . Full details are in the inspection report below.
-              </p>
-            )}
-
             <p className="text-xs text-muted">
-              Identifiers are masked for privacy. Anyone can verify this certificate at the link
-              below.
+              Buyers can verify this certificate instantly using the QR code or verification link.
             </p>
           </div>
 
           <aside className="flex flex-col items-center gap-3 md:min-w-[160px]">
-            <div className="qr-frame">
-              <QRCodeSVG value={cert.qr_code_payload} size={132} />
-            </div>
-            <p className="text-center text-xs text-muted max-w-[140px]">
-              Scan to verify this device
-            </p>
+            <VerificationQrCode url={summary.verificationUrl} />
           </aside>
         </div>
       </div>

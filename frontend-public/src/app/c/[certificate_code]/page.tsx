@@ -1,11 +1,13 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+
 import { CertificateCard } from "@/components/CertificateCard";
 import { InspectionReport } from "@/components/InspectionReport";
 import { SaveLaptopPanel } from "@/components/SaveLaptopPanel";
-import { ShareButton } from "@/components/ShareButton";
+import { ShareCertificateSection } from "@/components/ShareCertificateSection";
+import { ShareCertificateClient } from "@/components/ShareCertificateClient";
 import { api } from "@/lib/api";
-import { env } from "@/lib/env";
+import { buildCertificationSummary } from "@/lib/certification-summary";
 
 interface Props {
   params: Promise<{ certificate_code: string }>;
@@ -22,27 +24,35 @@ export default async function CertificatePage({ params }: Props) {
     notFound();
   }
 
-  const shareUrl =
-    cert.public_url || `${env.siteUrl}/c/${cert.certificate_code}`;
+  const summary = buildCertificationSummary(cert);
 
   return (
     <div className="page-container page-container--cert py-10 md:py-14">
+      <ShareCertificateClient event="CertificateGenerated" certificateId={cert.certificate_code} />
+
       <CertificateCard cert={cert} />
 
       {cert.inspection_report && (
-        <InspectionReport report={cert.inspection_report} />
+        <InspectionReport
+          report={cert.inspection_report}
+          certContext={{
+            battery_health_percent: cert.battery_health_percent,
+            storage_health_percent: cert.storage_health_percent,
+          }}
+        />
       )}
+
+      <ShareCertificateSection summary={summary} />
 
       <SaveLaptopPanel verificationCode={cert.certificate_code} deviceName={cert.device_name} />
 
       <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
-        <Link
-          href={`/verify?code=${cert.certificate_code}`}
-          className="btn btn-brand"
-        >
-          Verify this certification
+        <Link href={summary.verificationUrl} className="btn btn-brand">
+          Open verification portal
         </Link>
-        <ShareButton url={shareUrl} />
+        <Link href={`/verify?code=${cert.certificate_code}`} className="btn btn-secondary">
+          Run live device check
+        </Link>
       </div>
     </div>
   );

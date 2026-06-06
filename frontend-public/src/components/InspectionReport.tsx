@@ -1,6 +1,9 @@
 "use client";
 
 import type { InspectionReport as InspectionReportPayload } from "@/lib/api";
+import { extractOverallScoreFromReport, scoreToCondition } from "@/lib/certification-summary";
+
+import { ConditionBadge, ScoreDisplay } from "@/components/ConditionBadge";
 
 /* ── Types ─────────────────────────────────────────────────────────── */
 
@@ -152,10 +155,20 @@ const SECURITY_LABELS: Record<string, string> = {
 
 /* ── Main component ─────────────────────────────────────────────────── */
 
-export function InspectionReport({ report }: { report: InspectionReportPayload }) {
+export function InspectionReport({
+  report,
+  certContext,
+}: {
+  report: InspectionReportPayload;
+  certContext?: {
+    battery_health_percent?: number | null;
+    storage_health_percent?: number | null;
+  };
+}) {
   const { summary, advanced } = normalizeReport(report);
-  const grade = summary.certification_grade ?? "—";
   const warnings = summary.warnings ?? [];
+  const overallScore = extractOverallScoreFromReport(report, certContext);
+  const condition = scoreToCondition(overallScore);
 
   return (
     <article className="card mt-8">
@@ -166,9 +179,9 @@ export function InspectionReport({ report }: { report: InspectionReportPayload }
             Device inspection report
           </p>
           <div className="mt-3 flex flex-wrap items-end gap-4">
-            <div>
-              <p className="text-4xl font-bold tracking-tight text-trust">{grade}</p>
-              <p className="text-sm text-secondary mt-1">Overall certification grade</p>
+            <div className="flex flex-wrap items-center gap-3">
+              <ConditionBadge score={overallScore} label={condition} />
+              <ScoreDisplay score={overallScore} />
             </div>
             <div className="flex-1 min-w-[200px]">
               <h2 className="text-xl font-semibold">{summary.device_name}</h2>
@@ -198,42 +211,11 @@ export function InspectionReport({ report }: { report: InspectionReportPayload }
 
         <section>
           <h3 className="text-sm font-semibold mb-3 text-secondary uppercase tracking-wide">
-            Condition at a glance
+            Buyer summary
           </h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <SummaryCard label="Battery" value={summary.battery} />
             <SummaryCard label="Storage" value={summary.storage} />
-            <SummaryCard label="Performance" value={summary.performance} />
-            <SummaryCard label="Screen" value={summary.screen} />
-            <SummaryCard label="Memory" value={summary.memory} />
-            <SummaryCard label="Cooling" value={summary.thermals} />
-          </div>
-        </section>
-
-        <section>
-          <h3 className="text-sm font-semibold mb-3 text-secondary uppercase tracking-wide">
-            Functional checks
-          </h3>
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-            {summary.functional &&
-              Object.entries(summary.functional).map(([key, value]) => (
-                <SummaryCard
-                  key={key}
-                  label={FUNCTIONAL_LABELS[key] ?? key}
-                  value={value}
-                  compact
-                />
-              ))}
-          </div>
-        </section>
-
-        <section className="rounded-xl bg-surface-muted p-4">
-          <h3 className="text-sm font-semibold mb-2">Security</h3>
-          <p className="text-sm font-medium mb-3">{summary.security?.headline}</p>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <SummaryCard label="Secure Boot" value={summary.security?.secure_boot} compact />
-            <SummaryCard label="Encryption" value={summary.security?.encryption} compact />
-            <SummaryCard label="TPM" value={summary.security?.tpm} compact />
           </div>
         </section>
 
@@ -246,12 +228,50 @@ export function InspectionReport({ report }: { report: InspectionReportPayload }
 
         {/* Layer 2 — collapsed technical details */}
         <section className="pt-4 border-t border-border space-y-2">
-          <p className="text-xs text-muted mb-2">
-            Technical proof and raw diagnostics are available below — collapsed by default.
-          </p>
-
           <Collapsible title="Show technical details" defaultOpen={false}>
-            <div className="space-y-2 pt-2">
+            <div className="space-y-6 pt-4">
+              <section>
+                <h3 className="text-sm font-semibold mb-3 text-secondary uppercase tracking-wide">
+                  Condition at a glance
+                </h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                  <SummaryCard label="Battery" value={summary.battery} />
+                  <SummaryCard label="Storage" value={summary.storage} />
+                  <SummaryCard label="Performance" value={summary.performance} />
+                  <SummaryCard label="Screen" value={summary.screen} />
+                  <SummaryCard label="Memory" value={summary.memory} />
+                  <SummaryCard label="Cooling" value={summary.thermals} />
+                </div>
+              </section>
+
+              <section>
+                <h3 className="text-sm font-semibold mb-3 text-secondary uppercase tracking-wide">
+                  Functional checks
+                </h3>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                  {summary.functional &&
+                    Object.entries(summary.functional).map(([key, value]) => (
+                      <SummaryCard
+                        key={key}
+                        label={FUNCTIONAL_LABELS[key] ?? key}
+                        value={value}
+                        compact
+                      />
+                    ))}
+                </div>
+              </section>
+
+              <section className="rounded-xl bg-surface-muted p-4">
+                <h3 className="text-sm font-semibold mb-2">Security</h3>
+                <p className="text-sm font-medium mb-3">{summary.security?.headline}</p>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <SummaryCard label="Secure Boot" value={summary.security?.secure_boot} compact />
+                  <SummaryCard label="Encryption" value={summary.security?.encryption} compact />
+                  <SummaryCard label="TPM" value={summary.security?.tpm} compact />
+                </div>
+              </section>
+
+              <div className="space-y-2">
               <Collapsible title="Advanced battery data" nested>
                 <FieldList fields={advanced.battery?.fields} />
                 {advanced.battery?.certification_notes && advanced.battery.certification_notes.length > 0 && (
@@ -341,6 +361,7 @@ export function InspectionReport({ report }: { report: InspectionReportPayload }
                   <p className="text-sm text-muted">No evidence files attached to this certificate.</p>
                 )}
               </Collapsible>
+              </div>
             </div>
           </Collapsible>
         </section>
