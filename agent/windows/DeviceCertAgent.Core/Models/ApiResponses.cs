@@ -45,3 +45,11 @@ public sealed class ScanSessionSubmitResponse
     public string? VerificationUrl { get; set; }
     public string? QrCodeUrl { get; set; }
 }
+
+public sealed class ScanPairingExchangeResponse
+{
+    public string UploadToken { get; set; } = "";
+    public int ExpiresInSeconds { get; set; }
+    public string ScanSessionId { get; set; } = "";
+    public string? LinkedAccountName { get; set; }
+}

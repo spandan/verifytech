@@ -41,3 +41,20 @@ def get_current_user(user: AuthUser | None = Depends(get_optional_user)) -> Auth
     if not user:
         raise HTTPException(status_code=401, detail="Authentication required")
     return user
+
+
+def get_scan_upload_claims(
+    authorization: str | None = Header(default=None),
+) -> ScanUploadClaims:
+    token = _bearer_token(authorization)
+    if not token:
+        raise HTTPException(status_code=401, detail="Upload token required")
+
+    try:
+        from jwt.exceptions import InvalidTokenError
+
+        from app.auth.scan_upload_jwt import decode_upload_token
+
+        return decode_upload_token(token)
+    except Exception:
+        raise HTTPException(status_code=401, detail="Invalid or expired upload token")

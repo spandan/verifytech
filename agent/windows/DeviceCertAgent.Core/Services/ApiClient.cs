@@ -84,6 +84,39 @@ public sealed class ApiClient : IDisposable
         return result ?? throw new InvalidOperationException("Empty scan submit response.");
     }
 
+    public async Task<ScanPairingExchangeResponse> ExchangePairingAsync(
+        string pairingCode,
+        string deviceFingerprint,
+        CancellationToken ct = default)
+    {
+        var body = new Dictionary<string, object?>
+        {
+            ["pairing_code"] = pairingCode.Trim(),
+            ["device_fingerprint"] = deviceFingerprint,
+            ["agent_version"] = _agentVersion,
+        };
+        var response = await SendWithRetryAsync(
+            () => _http.PostAsJsonAsync("api/scan-sessions/exchange", body, JsonOptions, ct),
+            ct);
+        await EnsureSuccessAsync(response);
+        var result = await response.Content.ReadFromJsonAsync<ScanPairingExchangeResponse>(JsonOptions, ct);
+        return result ?? throw new InvalidOperationException("Empty pairing exchange response.");
+    }
+
+    public async Task<ScanSessionSubmitResponse> UploadPairedScanAsync(
+        string uploadToken,
+        ScanSessionSubmitPayload payload,
+        CancellationToken ct = default)
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Post, "api/scans/upload");
+        request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", uploadToken);
+        request.Content = JsonContent.Create(payload, options: JsonOptions);
+        var response = await SendWithRetryAsync(() => _http.SendAsync(request, ct), ct);
+        await EnsureSuccessAsync(response);
+        var result = await response.Content.ReadFromJsonAsync<ScanSessionSubmitResponse>(JsonOptions, ct);
+        return result ?? throw new InvalidOperationException("Empty paired upload response.");
+    }
+
     public async Task<CertifyApiResponse> CertifyAsync(DeviceReport report, CancellationToken ct = default)
     {
         var response = await _http.PostAsJsonAsync("api/reports/certify", report, JsonOptions, ct);

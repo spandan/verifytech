@@ -54,7 +54,30 @@
                          Text="Requires .NET 8 Desktop Runtime (x64). If the app won't start, install from dotnet.microsoft.com/download/dotnet/8.0 or run Launch-VerifyTechAgent.cmd."/>
             </StackPanel>
           </Border>
-          <Button Content="Start certification" Style="{StaticResource AccentButton}" Command="{Binding BeginCertificationCommand}" HorizontalAlignment="Left"/>
+          <StackPanel Orientation="Horizontal">
+            <Button Content="Start certification" Style="{StaticResource AccentButton}" Command="{Binding BeginCertificationCommand}" Margin="0,0,10,0"/>
+            <Button Content="Enter pairing code" Style="{StaticResource SecondaryButton}" Command="{Binding OpenManualPairingCommand}"/>
+          </StackPanel>
+        </StackPanel>
+
+        <!-- Pairing manual -->
+        <StackPanel Visibility="{Binding CurrentPage, Converter={StaticResource PageVis}, ConverterParameter=PairingManual}">
+          <TextBlock Text="Enter pairing code" Style="{StaticResource PageTitle}" Margin="0,0,0,12"/>
+          <TextBlock Style="{StaticResource BodyText}" Margin="0,0,0,16"
+                     Text="Paste the code from certronx.com if the browser did not open this app automatically. Codes expire in 2 minutes."/>
+          <TextBox Text="{Binding ManualPairingCode, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,12" Padding="10" FontFamily="Consolas"/>
+          <StackPanel Orientation="Horizontal">
+            <Button Content="Connect" Style="{StaticResource AccentButton}" Command="{Binding SubmitManualPairingCodeCommand}" Margin="0,0,10,0"/>
+            <Button Content="Back" Style="{StaticResource SecondaryButton}" Command="{Binding BackToWelcomeCommand}"/>
+          </StackPanel>
+          <TextBlock Text="{Binding ErrorMessage}" Foreground="{StaticResource ErrorBrush}" Margin="0,12,0,0"
+                     Visibility="{Binding HasError, Converter={StaticResource BoolVis}}"/>
+        </StackPanel>
+
+        <!-- Pairing connecting -->
+        <StackPanel Visibility="{Binding CurrentPage, Converter={StaticResource PageVis}, ConverterParameter=PairingConnecting}">
+          <TextBlock Text="Connecting to Certronx" Style="{StaticResource PageTitle}" Margin="0,0,0,12"/>
+          <TextBlock Style="{StaticResource BodyText}" Text="{Binding StatusMessage}" Margin="0,0,0,8"/>
         </StackPanel>
 
         <!-- 2 Disclosure -->

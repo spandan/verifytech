@@ -35,6 +35,24 @@ public sealed class ScanSessionFlowService : IDisposable
         }
     }
 
+    public async Task<ScanPairingExchangeResponse> ExchangePairingAsync(
+        string pairingCode,
+        string deviceFingerprint,
+        CancellationToken ct = default)
+    {
+        var endpoint = _api.EndpointUrl("api/scan-sessions/exchange");
+        _logger.Info($"Exchanging pairing code at {endpoint}");
+        try
+        {
+            return await _api.ExchangePairingAsync(pairingCode, deviceFingerprint, ct);
+        }
+        catch (Exception ex)
+        {
+            _logger.Error($"Pairing exchange failed at {endpoint}", ex);
+            throw MapFriendly(ex, endpoint, "Pairing failed");
+        }
+    }
+
     public async Task<ScanSessionSubmitResponse> SubmitAsync(
         ScanSessionStartResponse session,
         CollectionResult collected,
@@ -43,25 +61,7 @@ public sealed class ScanSessionFlowService : IDisposable
         bool adminMode,
         CancellationToken ct = default)
     {
-        var launch = new AppLaunchOptions { Mode = "certify" };
-        var report = _reportAssembly.Assemble(collected, launch, adminMode);
-        report.EvidenceBundle = collected.Evidence;
-        var fingerprint = HardwareFingerprintService.Compute(collected);
-
-        var payload = new ScanSessionSubmitPayload
-        {
-            SessionId = session.SessionId,
-            Nonce = session.Nonce,
-            AgentVersion = _settings.AgentVersion,
-            Platform = "windows",
-            ScanStartedAt = scanStartedAt,
-            ScanCompletedAt = scanCompletedAt,
-            AdminMode = adminMode,
-            HardwareFingerprint = fingerprint,
-            ScanData = report,
-            EvidenceArtifacts = SerializeEvidence(collected.Evidence),
-        };
-
+        var payload = BuildSubmitPayload(session.SessionId, session.Nonce, collected, scanStartedAt, scanCompletedAt, adminMode);
         _logger.Info($"Submitting scan session {MaskId(session.SessionId)}");
         var endpoint = _api.EndpointUrl($"api/scan-sessions/{session.SessionId}/submit");
         try
@@ -77,21 +77,77 @@ public sealed class ScanSessionFlowService : IDisposable
         }
     }
 
+    public async Task<ScanSessionSubmitResponse> UploadPairedAsync(
+        string uploadToken,
+        string sessionId,
+        CollectionResult collected,
+        DateTime scanStartedAt,
+        DateTime scanCompletedAt,
+        bool adminMode,
+        CancellationToken ct = default)
+    {
+        var payload = BuildSubmitPayload(sessionId, nonce: "", collected, scanStartedAt, scanCompletedAt, adminMode);
+        _logger.Info($"Uploading paired scan {MaskId(sessionId)}");
+        var endpoint = _api.EndpointUrl("api/scans/upload");
+        try
+        {
+            var result = await _api.UploadPairedScanAsync(uploadToken, payload, ct);
+            _logger.Info($"Certificate issued {result.CertificateCode}");
+            return result;
+        }
+        catch (Exception ex)
+        {
+            _logger.Error($"Paired upload failed at {endpoint}", ex);
+            throw MapFriendly(ex, endpoint, "Upload failed");
+        }
+    }
+
+    private ScanSessionSubmitPayload BuildSubmitPayload(
+        string sessionId,
+        string nonce,
+        CollectionResult collected,
+        DateTime scanStartedAt,
+        DateTime scanCompletedAt,
+        bool adminMode)
+    {
+        var launch = new AppLaunchOptions { Mode = "certify" };
+        var report = _reportAssembly.Assemble(collected, launch, adminMode);
+        report.EvidenceBundle = collected.Evidence;
+        var fingerprint = HardwareFingerprintService.Compute(collected);
+
+        return new ScanSessionSubmitPayload
+        {
+            SessionId = sessionId,
+            Nonce = nonce,
+            AgentVersion = _settings.AgentVersion,
+            Platform = "windows",
+            ScanStartedAt = scanStartedAt,
+            ScanCompletedAt = scanCompletedAt,
+            AdminMode = adminMode,
+            HardwareFingerprint = fingerprint,
+            ScanData = report,
+            EvidenceArtifacts = SerializeEvidence(collected.Evidence),
+        };
+    }
+
     private static string MaskId(string id) =>
         id.Length <= 8 ? "****" : $"{id[..4]}…{id[^4..]}";
 
-    private static Exception MapFriendly(Exception ex, string endpointUrl) => ex switch
+    private static Exception MapFriendly(Exception ex, string endpointUrl, string? prefix = null) => ex switch
     {
         HttpRequestException { Message: var m } when m.Contains("410") || m.Contains("expired", StringComparison.OrdinalIgnoreCase)
-            => new InvalidOperationException("Your scan session expired. Please start a new certification scan."),
+            => new InvalidOperationException(
+                prefix is null
+                    ? "Your scan session expired. Please start a new certification scan."
+                    : $"{prefix}: pairing code expired. Request a new code from the website."),
         HttpRequestException { Message: var m } when m.Contains("409")
             => new InvalidOperationException("This scan was already submitted."),
         HttpRequestException { Message: var m } when m.Contains("503") || m.Contains("502")
             => new InvalidOperationException(
-                $"The VerifyTech server is temporarily unavailable.\n\nEndpoint: {endpointUrl}\n\nDetails: {m}"),
+                $"The Certronx server is temporarily unavailable.\n\nEndpoint: {endpointUrl}\n\nDetails: {m}"),
         HttpRequestException hre
             => new InvalidOperationException(
-                $"Unable to reach VerifyTech. Check your internet connection and try again.\n\nEndpoint: {endpointUrl}\n\nDetails: {hre.Message}"),
+                $"Unable to reach Certronx. Check your internet connection and try again.\n\nEndpoint: {endpointUrl}\n\nDetails: {hre.Message}"),
         TaskCanceledException
             => new InvalidOperationException(
                 $"The request timed out. Check your connection and try again.\n\nEndpoint: {endpointUrl}"),
@@ -135,4 +191,11 @@ public sealed class ScanSessionSubmitPayload
     public string HardwareFingerprint { get; set; } = "";
     public DeviceReport ScanData { get; set; } = new();
     public List<EvidenceArtifactUpload>? EvidenceArtifacts { get; set; }
+}
+
+public sealed class PairedScanContext
+{
+    public required string UploadToken { get; init; }
+    public required string ScanSessionId { get; init; }
+    public string? LinkedAccountName { get; init; }
 }

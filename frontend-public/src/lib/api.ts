@@ -148,6 +148,12 @@ export interface MyLaptop {
   report_token?: string | null;
 }
 
+export interface ScanPairingSession {
+  pairing_code: string;
+  expires_at: string;
+  deep_link: string;
+}
+
 export const api = {
   detectPlatform: () => request<{ platform: string }>("/api/agents/detect"),
   getAgent: (platform: string) => request<AgentInfo>(`/api/agents/${platform}`),
@@ -168,6 +174,15 @@ export const api = {
   getMyLaptops: () => request<{ laptops: MyLaptop[] }>("/api/account/laptops", undefined, true),
   createScanLinkToken: () =>
     request<{ token: string; expires_at: string }>("/api/account/scan-link-token", { method: "POST" }, true),
+  createPairingSession: (businessId?: string) =>
+    request<ScanPairingSession>(
+      "/api/scan-sessions/create-pairing",
+      {
+        method: "POST",
+        body: JSON.stringify(businessId ? { business_id: businessId } : {}),
+      },
+      true,
+    ),
   renameDevice: (deviceId: string, nickname: string) =>
     request<MyLaptop>(
       `/api/account/devices/${deviceId}`,

@@ -1,8 +1,6 @@
--- DevicePassport / VerifyTech — complete Supabase schema
+-- Certronx / VerifyTech — complete Supabase schema (canonical)
 -- Run once in the Supabase SQL editor on a fresh project (or after reset.sql).
--- Includes: tenants, devices, certificates, scan sessions, account/scan_reports, storage, RLS.
---
--- Existing project already on an older schema? Run database/upgrade.sql instead.
+-- Includes: tenants, devices, certificates, scan sessions, pairing, account layer, storage, RLS.
 
 -- ─── Extensions ─────────────────────────────────────────────────────────────
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
@@ -233,8 +231,33 @@ CREATE TABLE audit_logs (
 CREATE INDEX idx_audit_logs_tenant_id ON audit_logs(tenant_id);
 CREATE INDEX idx_audit_logs_resource ON audit_logs(resource_type, resource_id);
 
+-- ─── Scan pairing (browser → Windows agent deep link) ─────────────────────
+CREATE TYPE scan_pairing_status AS ENUM ('pending', 'exchanged', 'uploaded', 'expired', 'revoked');
+
+CREATE TABLE scan_pairing_sessions (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    pairing_code TEXT NOT NULL UNIQUE,
+    owner_user_id UUID REFERENCES profiles(id) ON DELETE SET NULL,
+    tenant_id UUID REFERENCES tenants(id) ON DELETE SET NULL,
+    created_by_user_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+    status scan_pairing_status NOT NULL DEFAULT 'pending',
+    expires_at TIMESTAMPTZ NOT NULL,
+    max_uses INTEGER NOT NULL DEFAULT 1,
+    uses_count INTEGER NOT NULL DEFAULT 0,
+    paired_device_fingerprint TEXT,
+    agent_version TEXT,
+    scan_session_id TEXT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    exchanged_at TIMESTAMPTZ,
+    uploaded_at TIMESTAMPTZ
+);
+
+CREATE INDEX idx_scan_pairing_sessions_code ON scan_pairing_sessions(pairing_code);
+CREATE INDEX idx_scan_pairing_sessions_status ON scan_pairing_sessions(status);
+CREATE INDEX idx_scan_pairing_sessions_expires_at ON scan_pairing_sessions(expires_at);
+
 -- ─── Agent scan sessions (short-lived, nonce-bound) ───────────────────────
-CREATE TYPE scan_session_status AS ENUM ('started', 'submitted', 'expired', 'rejected');
+CREATE TYPE scan_session_status AS ENUM ('started', 'exchanged', 'submitted', 'expired', 'rejected');
 
 CREATE TABLE scan_sessions (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -258,7 +281,11 @@ CREATE TABLE scan_sessions (
     qr_code_url TEXT,
     rejection_reason TEXT,
     user_id UUID REFERENCES profiles(id) ON DELETE SET NULL,
+    tenant_id UUID REFERENCES tenants(id) ON DELETE SET NULL,
     notification_email TEXT,
+    pairing_session_id UUID REFERENCES scan_pairing_sessions(id) ON DELETE SET NULL,
+    upload_jti TEXT,
+    paired_device_fingerprint TEXT,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 

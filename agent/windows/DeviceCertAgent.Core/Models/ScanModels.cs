@@ -92,6 +92,7 @@ public sealed class AppLaunchOptions
     public string? CertificateCode { get; set; }
     public string? IntakeId { get; set; }
     public string? ApiUrlOverride { get; set; }
+    public string? PairingCode { get; set; }
     public bool MockApi { get; set; }
     public bool Headless { get; set; }
     public bool EnhancedScanOnStartup { get; set; }

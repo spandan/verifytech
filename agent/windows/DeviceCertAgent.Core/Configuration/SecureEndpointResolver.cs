@@ -10,6 +10,7 @@ namespace DeviceCertAgent.Core.Configuration;
 public sealed class SecureEndpointResolver
 {
     public const string LocalConfigFile = "appsettings.local.json";
+    public const string ProtocolScheme = "certronx";
 
     public (AgentRuntimeSettings Settings, AppLaunchOptions Launch) Resolve(string[] args)
     {
@@ -140,7 +141,14 @@ public sealed class SecureEndpointResolver
         var options = new AppLaunchOptions();
         for (var i = 0; i < args.Length; i++)
         {
-            switch (args[i])
+            var arg = args[i];
+            if (TryParseDeepLink(arg, out var pairingCode))
+            {
+                options.PairingCode = pairingCode;
+                continue;
+            }
+
+            switch (arg)
             {
                 case "--api-url" when i + 1 < args.Length:
                     options.ApiUrlOverride = args[++i];
@@ -151,9 +159,55 @@ public sealed class SecureEndpointResolver
                 case "--enhanced-scan":
                     options.EnhancedScanOnStartup = true;
                     break;
+                case "--pairing-code" when i + 1 < args.Length:
+                    options.PairingCode = args[++i].Trim();
+                    break;
             }
         }
         return options;
+    }
+
+    public static bool TryParseDeepLink(string arg, out string pairingCode)
+    {
+        pairingCode = "";
+        if (string.IsNullOrWhiteSpace(arg))
+            return false;
+
+        if (!Uri.TryCreate(arg.Trim(), UriKind.Absolute, out var uri))
+            return false;
+
+        if (!string.Equals(uri.Scheme, ProtocolScheme, StringComparison.OrdinalIgnoreCase))
+            return false;
+
+        var path = uri.AbsolutePath.Trim('/');
+        if (!path.Equals("scan/start", StringComparison.OrdinalIgnoreCase))
+            return false;
+
+        var query = uri.Query;
+        var code = GetQueryParam(query, "pairingCode") ?? GetQueryParam(query, "pairing_code");
+        if (string.IsNullOrWhiteSpace(code))
+            return false;
+
+        pairingCode = code.Trim();
+        return true;
+    }
+
+    private static string? GetQueryParam(string query, string key)
+    {
+        if (string.IsNullOrEmpty(query))
+            return null;
+
+        foreach (var part in query.TrimStart('?').Split('&', StringSplitOptions.RemoveEmptyEntries))
+        {
+            var kv = part.Split('=', 2);
+            if (kv.Length != 2)
+                continue;
+            if (!string.Equals(Uri.UnescapeDataString(kv[0]), key, StringComparison.OrdinalIgnoreCase))
+                continue;
+            return Uri.UnescapeDataString(kv[1]);
+        }
+
+        return null;
     }
 
     private sealed record BuildMetadata(string BuildChannel, bool AllowEndpointOverride, bool ShowDeveloperUi);

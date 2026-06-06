@@ -11,12 +11,15 @@ from shared.hashing import compute_hardware_fingerprint
 
 from app.config import settings
 from app.db.models import Database
+from app.db.records import ScanSession
+from app.auth.scan_upload_jwt import ScanUploadClaims
 from app.schemas.dto import (
     ReportSubmitRequest,
     ScanSessionStartRequest,
     ScanSessionStartResponse,
     ScanSessionSubmitRequest,
     ScanSessionSubmitResponse,
+    ScanUploadRequest,
 )
 from app.services.agent_report_adapter import agent_report_to_internal
 from app.services.audit_service import AuditService
@@ -25,6 +28,7 @@ from app.services.evidence_storage_service import EvidenceStorageService
 from app.services.inspection_report_service import InspectionReportService
 from app.services.report_service import ReportService
 from app.services.scan_report_service import ScanReportService
+from app.services.scan_pairing_service import ScanPairingService
 
 
 class ScanSessionService:
@@ -35,6 +39,7 @@ class ScanSessionService:
         self._inspection = InspectionReportService()
         self._scan_reports = ScanReportService()
         self._account = AccountService()
+        self._pairing = ScanPairingService()
 
     def start(self, db: Database, body: ScanSessionStartRequest) -> ScanSessionStartResponse:
         if body.platform.lower() != "windows":
@@ -103,6 +108,92 @@ class ScanSessionService:
         if session.agent_version != body.agent_version:
             raise ValueError("Agent version does not match the started session.")
 
+        return self._execute_submit(db, session, session_id, body)
+
+    def upload(
+        self,
+        db: Database,
+        claims: ScanUploadClaims,
+        body: ScanUploadRequest,
+    ) -> ScanSessionSubmitResponse:
+        if body.session_id != claims.scan_session_id:
+            raise ValueError("session_id does not match upload token.")
+
+        session = db.get_scan_session(claims.scan_session_id)
+        if not session:
+            raise ValueError("Scan session not found.")
+
+        if session.status != "exchanged":
+            raise ValueError("This scan session is not ready for upload.")
+
+        if session.upload_jti != claims.jti:
+            raise ValueError("Upload token has already been used or is invalid.")
+
+        expires_at = session.expires_at
+        if expires_at and expires_at.tzinfo is None:
+            expires_at = expires_at.replace(tzinfo=timezone.utc)
+        if expires_at and datetime.now(timezone.utc) > expires_at:
+            db.update_scan_session(claims.scan_session_id, {"status": "expired"})
+            raise ValueError("Scan session has expired. Start a new scan from the website.")
+
+        if session.agent_version != body.agent_version:
+            raise ValueError("Agent version does not match the paired session.")
+
+        paired_fp = (session.paired_device_fingerprint or "").strip()
+        if not paired_fp or paired_fp != body.hardware_fingerprint.strip():
+            raise ValueError("Device fingerprint does not match the paired session.")
+
+        if claims.device_fingerprint != body.hardware_fingerprint.strip():
+            raise ValueError("Device fingerprint does not match upload token.")
+
+        if session.user_id and claims.owner_user_id and session.user_id != claims.owner_user_id:
+            raise ValueError("Upload token does not match scan session owner.")
+
+        if session.tenant_id and claims.tenant_id and session.tenant_id != claims.tenant_id:
+            raise ValueError("Upload token does not match scan session workspace.")
+
+        submit_body = ScanSessionSubmitRequest(
+            session_id=body.session_id,
+            nonce=session.nonce,
+            agent_version=body.agent_version,
+            platform=body.platform,
+            scan_started_at=body.scan_started_at,
+            scan_completed_at=body.scan_completed_at,
+            admin_mode=body.admin_mode,
+            hardware_fingerprint=body.hardware_fingerprint,
+            scan_data=body.scan_data,
+            evidence_artifacts=body.evidence_artifacts,
+        )
+        result = self._execute_submit(db, session, claims.scan_session_id, submit_body)
+
+        pairing_code = None
+        if session.pairing_session_id:
+            pairing = db.get_scan_pairing_session_by_id(session.pairing_session_id)
+            pairing_code = pairing.get("pairing_code") if pairing else None
+        self._pairing.mark_uploaded(db, pairing_code)
+
+        self._audit.log(
+            db,
+            action="certificate_created_from_paired_scan",
+            resource_type="scan_session",
+            resource_id=session.id,
+            actor_user_id=session.user_id,
+            tenant_id=session.tenant_id,
+            metadata={
+                "session_id": claims.scan_session_id,
+                "certificate_code": result.certificate_code,
+            },
+        )
+
+        return result
+
+    def _execute_submit(
+        self,
+        db: Database,
+        session: ScanSession,
+        session_id: str,
+        body: ScanSessionSubmitRequest,
+    ) -> ScanSessionSubmitResponse:
         self._validate_scan_timing(body.scan_started_at, body.scan_completed_at)
         self._validate_scan_data(body.scan_data)
 
@@ -119,6 +210,7 @@ class ScanSessionService:
                     report=internal_report,
                     report_type="initial_certification",
                     owner_user_id=session.user_id,
+                    tenant_id=session.tenant_id,
                 ),
             )
         except ValueError as exc:

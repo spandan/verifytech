@@ -266,6 +266,19 @@ class Database:
     def update_scan_session(self, session_id: str, updates: dict[str, Any]) -> None:
         self.client.table("scan_sessions").update(updates).eq("session_id", session_id).execute()
 
+    def create_scan_pairing_session(self, payload: dict[str, Any]) -> dict[str, Any]:
+        payload = {"id": str(uuid4()), **payload}
+        return self._insert("scan_pairing_sessions", payload)
+
+    def get_scan_pairing_session(self, pairing_code: str) -> dict[str, Any] | None:
+        return self._first("scan_pairing_sessions", pairing_code=pairing_code)
+
+    def get_scan_pairing_session_by_id(self, pairing_id: str) -> dict[str, Any] | None:
+        return self._first("scan_pairing_sessions", id=pairing_id)
+
+    def update_scan_pairing_session(self, pairing_code: str, updates: dict[str, Any]) -> None:
+        self.client.table("scan_pairing_sessions").update(updates).eq("pairing_code", pairing_code).execute()
+
     # ── Scan reports & account ───────────────────────────────────────────────
 
     def create_scan_report(self, payload: dict[str, Any]) -> ScanReport:

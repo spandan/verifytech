@@ -1,23 +1,40 @@
-# VerifyTech database
+# Certronx database
 
-PostgreSQL schema for Supabase. Three SQL files — no separate migrations folder.
+PostgreSQL schema for Supabase. **`schema.sql` is the canonical full definition.**
 
 ## Fresh project (first time)
 
 1. Create a Supabase project.
 2. Run **`schema.sql`** in **Supabase → SQL Editor**.
 
-## Upgrade existing project (keep data)
+## Production data reset (keep schema + agent releases)
 
-If you already ran an older `schema.sql` and need account tables (`scan_reports`, magic-link profiles, etc.):
+Use when promoting an environment to production — wipe staging/test **data** without rebuilding schema or re-uploading the Windows agent.
 
-1. Run **`upgrade.sql`** in the SQL Editor (idempotent — safe to re-run).
+**SQL only** (paste in Supabase SQL Editor):
 
-Do **not** run full `schema.sql` on a populated database (it will fail on existing tables).
+```bash
+database/data_reset.sql
+```
+
+**Recommended** (also clears `certification-evidence` storage; preserves `agent-releases`):
+
+```bash
+chmod +x scripts/data-reset-prod.sh
+./scripts/data-reset-prod.sh
+```
+
+| Cleared | Preserved |
+|--------|-----------|
+| Certificates, devices, scans, tenants, profiles, audit logs | Schema, RLS, triggers |
+| `certification-evidence` storage files | `agent-releases` bucket + `agent_versions` table |
+| | `auth.users` (profiles recreated on next sign-in) |
+
+Supabase blocks `DELETE FROM storage.objects` in SQL — evidence files are removed via `scripts/empty_storage_buckets.py --bucket certification-evidence`.
 
 ## Full reset (wipe app data + recreate schema)
 
-Deletes all certificates, devices, scan sessions, storage files in app buckets, and reapplies `schema.sql`. **Does not** delete Supabase Auth users.
+Drops all app tables and enums, empties **both** storage buckets, and reapplies `schema.sql`. **Does not** delete Supabase Auth users.
 
 **Note:** Supabase does not allow `DELETE FROM storage.objects` in SQL. Bucket files are removed via the Storage API (`scripts/empty_storage_buckets.py`), which `reset-database.sh` runs automatically.
 
@@ -63,15 +80,13 @@ Backups are written to `database/backups/verifytech-YYYYMMDD-HHMMSS.sql`.
 2. Run `database/reset.sql` in the SQL Editor.
 3. Run `database/schema.sql` in the SQL Editor.
 
-To upgrade without wiping data, run `database/upgrade.sql` instead of steps 2–3.
-
 Or use only SQL (tables reset but orphaned storage files may remain):
 
 ```bash
 ./scripts/reset-database.sh --skip-storage --yes
 ```
 
-## What gets removed vs kept
+## What gets removed vs kept (full reset)
 
 | Removed | Kept |
 |--------|------|
@@ -83,7 +98,7 @@ Or use only SQL (tables reset but orphaned storage files may remain):
 
 | File | Purpose |
 |------|---------|
-| `schema.sql` | Full schema (fresh install or after `reset.sql`) |
+| `schema.sql` | **Canonical** full schema (fresh install or after `reset.sql`) |
 | `reset.sql` | Teardown only — run before `schema.sql` |
-| `upgrade.sql` | Idempotent incremental upgrade for existing databases |
+| `data_reset.sql` | Clear application data only (prod promotion; keeps schema + agent releases) |
 | `backups/` | Auto-created SQL dumps from reset script |

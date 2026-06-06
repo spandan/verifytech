@@ -177,6 +177,49 @@ class ScanSessionSubmitResponse(BaseModel):
     public_report_token: Optional[str] = None
 
 
+class ScanPairingCreateRequest(BaseModel):
+    business_id: Optional[str] = Field(default=None, alias="businessId")
+
+    model_config = {"populate_by_name": True}
+
+
+class ScanPairingCreateResponse(BaseModel):
+    pairing_code: str = Field(alias="pairingCode")
+    expires_at: datetime = Field(alias="expiresAt")
+    deep_link: str = Field(alias="deepLink")
+
+    model_config = {"populate_by_name": True}
+
+
+class ScanPairingExchangeRequest(BaseModel):
+    pairing_code: str = Field(min_length=8, max_length=32, alias="pairingCode")
+    device_fingerprint: str = Field(min_length=16, max_length=128, alias="deviceFingerprint")
+    agent_version: str = Field(min_length=1, max_length=32, alias="agentVersion")
+
+    model_config = {"populate_by_name": True}
+
+
+class ScanPairingExchangeResponse(BaseModel):
+    upload_token: str = Field(alias="uploadToken")
+    expires_in_seconds: int = Field(alias="expiresInSeconds")
+    scan_session_id: str = Field(alias="scanSessionId")
+    linked_account_name: Optional[str] = Field(default=None, alias="linkedAccountName")
+
+    model_config = {"populate_by_name": True}
+
+
+class ScanUploadRequest(BaseModel):
+    session_id: str
+    agent_version: str
+    platform: str = "windows"
+    scan_started_at: datetime
+    scan_completed_at: datetime
+    admin_mode: bool = False
+    hardware_fingerprint: str = Field(min_length=16, max_length=128)
+    scan_data: dict[str, Any]
+    evidence_artifacts: list[EvidenceArtifactUpload] = Field(default_factory=list)
+
+
 # ─── Verification ─────────────────────────────────────────────────────────────
 
 class VerifyLookupRequest(BaseModel):

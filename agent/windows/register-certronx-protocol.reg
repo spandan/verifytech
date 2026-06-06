@@ -1,0 +1,14 @@
+Windows Registry Editor Version 5.00
+
+; Register certronx:// custom protocol for Certronx Windows Agent deep links.
+; Update the path below to your installed DeviceCertAgent.exe location.
+
+[HKEY_CLASSES_ROOT\certronx]
+@="URL:Certronx Protocol"
+"URL Protocol"=""
+
+[HKEY_CLASSES_ROOT\certronx\DefaultIcon]
+@="\"C:\\Program Files\\Certronx\\DeviceCertAgent.exe\",0"
+
+[HKEY_CLASSES_ROOT\certronx\shell\open\command]
+@="\"C:\\Program Files\\Certronx\\DeviceCertAgent.exe\" \"%1\""

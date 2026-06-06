@@ -15,6 +15,7 @@ from app.api.routes import (
     reports,
     reports_public,
     scan_sessions,
+    scans,
     tenants,
     verify,
 )
@@ -51,6 +52,7 @@ app.include_router(agents.router)
 app.include_router(reports.router)
 app.include_router(reports_public.router)
 app.include_router(scan_sessions.router)
+app.include_router(scans.router)
 app.include_router(certificates.router)
 app.include_router(verify.router)
 app.include_router(dashboard.router)

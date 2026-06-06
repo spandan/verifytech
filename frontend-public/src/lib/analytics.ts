@@ -7,7 +7,17 @@ export type AnalyticsEventName =
   | "OlxTemplateCopied"
   | "WhatsappShared"
   | "VerificationViewed"
-  | "QrVerificationViewed";
+  | "QrVerificationViewed"
+  | "PairingSessionCreated"
+  | "DeepLinkLaunchAttempted"
+  | "PairingCodeCopied"
+  | "AgentPairingExchangeStarted"
+  | "AgentPairingExchangeSucceeded"
+  | "AgentPairingExchangeFailed"
+  | "ScanUploadStarted"
+  | "ScanUploadSucceeded"
+  | "ScanUploadFailed"
+  | "CertificateCreatedFromPairedScan";
 
 export interface AnalyticsEvent {
   name: AnalyticsEventName;

@@ -325,7 +325,11 @@ class ScanSession:
     qr_code_url: str | None = None
     rejection_reason: str | None = None
     user_id: str | None = None
+    tenant_id: str | None = None
     notification_email: str | None = None
+    pairing_session_id: str | None = None
+    upload_jti: str | None = None
+    paired_device_fingerprint: str | None = None
     created_at: datetime | None = None
 
     @classmethod
@@ -351,7 +355,11 @@ class ScanSession:
             qr_code_url=row.get("qr_code_url"),
             rejection_reason=row.get("rejection_reason"),
             user_id=row.get("user_id"),
+            tenant_id=row.get("tenant_id"),
             notification_email=row.get("notification_email"),
+            pairing_session_id=str(row["pairing_session_id"]) if row.get("pairing_session_id") else None,
+            upload_jti=row.get("upload_jti"),
+            paired_device_fingerprint=row.get("paired_device_fingerprint"),
             created_at=_parse_dt(row.get("created_at")),
         )
 

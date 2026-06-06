@@ -1,5 +1,6 @@
 using System.Windows;
 using System.Windows.Threading;
+using DeviceCertAgent.App.Services;
 using DeviceCertAgent.App.ViewModels;
 using DeviceCertAgent.Core.Configuration;
 using DeviceCertAgent.Core.Services;
@@ -18,11 +19,21 @@ public partial class App : Application
 
         base.OnStartup(e);
 
+        if (!SingleInstanceService.TryAcquire(e.Args))
+        {
+            Shutdown();
+            return;
+        }
+
         var (settings, launch) = new SecureEndpointResolver().Resolve(e.Args);
         var shell = new ShellViewModel(settings, launch);
         var window = new MainWindow { DataContext = shell };
         MainWindow = window;
-        window.Loaded += (_, _) => shell.BeginEnhancedScanIfRequested();
+        window.Loaded += (_, _) =>
+        {
+            shell.BeginEnhancedScanIfRequested();
+            shell.BeginPairingIfRequested();
+        };
         window.Show();
     }
 
