@@ -1,11 +1,48 @@
 "use client";
 
-import { FormEvent, Suspense, useState } from "react";
+import { FormEvent, Suspense, useEffect, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 
 import { getSupabaseClient } from "@/lib/supabase";
 import { env, supabaseConfigured } from "@/lib/env";
+
+const RESEND_COOLDOWN_SECONDS = 60;
+
+function authErrorMessage(message: string, status?: number): string {
+  const lower = message.toLowerCase();
+
+  if (lower.includes("rate limit") || lower.includes("over_email_send_rate_limit")) {
+    return (
+      "Too many sign-in emails were sent recently. Supabase limits magic links to about 2 per hour " +
+      "on the built-in email service. Wait up to an hour, use a link already in your inbox, or connect " +
+      "custom SMTP in Supabase (Project Settings → Authentication → SMTP)."
+    );
+  }
+
+  if (lower.includes("not authorized")) {
+    return (
+      "This email address is not authorized on Supabase's built-in email service. Default Supabase " +
+      "email only works for addresses on your Supabase organization team. Add custom SMTP " +
+      "(Resend recommended) in Project Settings → Authentication → SMTP to send to any user."
+    );
+  }
+
+  if (
+    lower.includes("error sending magic link") ||
+    lower.includes("error sending confirmation") ||
+    (status === 500 && lower.includes("error sending"))
+  ) {
+    return (
+      "Supabase could not send the magic link email. This usually means email delivery is not configured " +
+      "for production. In Supabase: Project Settings → Authentication → SMTP → enable custom SMTP " +
+      "(e.g. Resend: host smtp.resend.com, port 465, user resend, password = your Resend API key, " +
+      "sender = a verified domain address). Also check Authentication → Logs for the exact SMTP error."
+    );
+  }
+
+  return message;
+}
 
 function LoginForm() {
   const params = useSearchParams();
@@ -13,9 +50,20 @@ function LoginForm() {
   const [email, setEmail] = useState("");
   const [status, setStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
   const [message, setMessage] = useState("");
+  const [cooldown, setCooldown] = useState(0);
+
+  useEffect(() => {
+    if (cooldown <= 0) return;
+    const timer = window.setInterval(() => {
+      setCooldown((seconds) => (seconds <= 1 ? 0 : seconds - 1));
+    }, 1000);
+    return () => window.clearInterval(timer);
+  }, [cooldown]);
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
+    if (cooldown > 0) return;
+
     const supabase = getSupabaseClient();
     if (!supabase) {
       setStatus("error");
@@ -31,11 +79,12 @@ function LoginForm() {
     });
     if (error) {
       setStatus("error");
-      setMessage(error.message);
+      setMessage(authErrorMessage(error.message, error.status));
       return;
     }
     setStatus("sent");
-    setMessage("Check your email for a magic link to sign in.");
+    setCooldown(RESEND_COOLDOWN_SECONDS);
+    setMessage("Check your email for a magic link to sign in. Links expire after a short time.");
   }
 
   return (
@@ -69,8 +118,18 @@ function LoginForm() {
               placeholder="you@example.com"
             />
           </label>
-          <button type="submit" className="btn btn-brand btn-block" disabled={status === "sending"}>
-            {status === "sending" ? "Sending…" : "Send magic link"}
+          <button
+            type="submit"
+            className="btn btn-brand btn-block"
+            disabled={status === "sending" || cooldown > 0}
+          >
+            {status === "sending"
+              ? "Sending…"
+              : cooldown > 0
+                ? `Resend available in ${cooldown}s`
+                : status === "sent"
+                  ? "Send another link"
+                  : "Send magic link"}
           </button>
         </form>
 
