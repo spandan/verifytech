@@ -9,7 +9,12 @@ export function getSupabaseClient(): SupabaseClient | null {
     return null;
   }
   if (!client) {
-    client = createClient(env.supabaseUrl, env.supabaseAnonKey);
+    client = createClient(env.supabaseUrl, env.supabaseAnonKey, {
+      auth: {
+        flowType: "pkce",
+        detectSessionInUrl: true,
+      },
+    });
   }
   return client;
 }

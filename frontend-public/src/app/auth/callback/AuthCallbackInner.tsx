@@ -11,27 +11,60 @@ export default function AuthCallbackInner() {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    const supabase = getSupabaseClient();
-    if (!supabase) {
-      setError("Authentication is not configured.");
-      return;
+    let cancelled = false;
+
+    async function finishSignIn() {
+      const supabase = getSupabaseClient();
+      if (!supabase) {
+        setError("Authentication is not configured.");
+        return;
+      }
+
+      const next = params.get("next") || "/my-laptops";
+      const code = params.get("code");
+
+      try {
+        if (code) {
+          const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
+          if (exchangeError) {
+            if (!cancelled) setError(exchangeError.message);
+            return;
+          }
+        } else {
+          const { data, error: sessionError } = await supabase.auth.getSession();
+          if (sessionError) {
+            if (!cancelled) setError(sessionError.message);
+            return;
+          }
+          if (!data.session) {
+            return;
+          }
+        }
+
+        if (!cancelled) router.replace(next);
+      } catch (err) {
+        if (!cancelled) {
+          setError(err instanceof Error ? err.message : "Sign-in failed");
+        }
+      }
     }
 
+    void finishSignIn();
+
+    const supabase = getSupabaseClient();
+    if (!supabase) return;
+
     const next = params.get("next") || "/my-laptops";
-
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) {
-        router.replace(next);
-      }
-    });
-
     const { data: subscription } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (session) {
+      if (session && !cancelled) {
         router.replace(next);
       }
     });
 
-    return () => subscription.subscription.unsubscribe();
+    return () => {
+      cancelled = true;
+      subscription.subscription.unsubscribe();
+    };
   }, [params, router]);
 
   return (
