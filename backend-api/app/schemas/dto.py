@@ -281,6 +281,12 @@ class AgentPairingClaimResponse(BaseModel):
     message: str
 
 
+class AgentPairingClaimStatusResponse(BaseModel):
+    connected: bool
+    pairing_code: str
+    message: str
+
+
 class AgentPairingStatusResponse(BaseModel):
     status: str
     user_id: Optional[str] = None

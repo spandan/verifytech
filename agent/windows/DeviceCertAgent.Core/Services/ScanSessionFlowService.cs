@@ -106,6 +106,22 @@ public sealed class ScanSessionFlowService : IDisposable
         }
     }
 
+    public async Task<AgentPairingStatusResponse> GetAgentPairingStatusForDeviceAsync(
+        string deviceNonce,
+        CancellationToken ct = default)
+    {
+        var endpoint = _api.EndpointUrl("api/agent/pairing/status-for-device");
+        try
+        {
+            return await _api.GetAgentPairingStatusForDeviceAsync(deviceNonce, ct);
+        }
+        catch (Exception ex)
+        {
+            _logger.Error($"Agent pairing status failed at {endpoint}", ex);
+            throw MapFriendly(ex, endpoint, "Could not check pairing status");
+        }
+    }
+
     public async Task<AgentPairingStatusResponse> GetAgentPairingStatusAsync(
         string pairingCode,
         string deviceNonce,

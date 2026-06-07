@@ -148,6 +148,17 @@ public sealed class ApiClient : IDisposable
         return result ?? throw new InvalidOperationException("Empty agent pairing create response.");
     }
 
+    public async Task<AgentPairingStatusResponse> GetAgentPairingStatusForDeviceAsync(
+        string deviceNonce,
+        CancellationToken ct = default)
+    {
+        var query = $"api/agent/pairing/status-for-device?device_nonce={Uri.EscapeDataString(deviceNonce.Trim())}";
+        var response = await SendWithRetryAsync(() => _http.GetAsync(query, ct), ct);
+        await EnsureSuccessAsync(response);
+        var result = await response.Content.ReadFromJsonAsync<AgentPairingStatusResponse>(JsonOptions, ct);
+        return result ?? throw new InvalidOperationException("Empty agent pairing status response.");
+    }
+
     public async Task<AgentPairingStatusResponse> GetAgentPairingStatusAsync(
         string pairingCode,
         string deviceNonce,

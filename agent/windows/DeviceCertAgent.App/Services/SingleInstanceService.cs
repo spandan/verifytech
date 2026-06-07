@@ -89,13 +89,8 @@ public static class SingleInstanceService
 
                     BringMainWindowForward();
                     if (DeviceCertAgent.Core.Configuration.SecureEndpointResolver.TryParseDeepLink(
-                            args[0], out var pairingCode, out var certificationToken))
-                    {
-                        if (!string.IsNullOrWhiteSpace(certificationToken))
-                            shell.HandleForwardedCertificationToken(certificationToken);
-                        else if (!string.IsNullOrWhiteSpace(pairingCode))
-                            shell.HandleForwardedPairingCode(pairingCode);
-                    }
+                            args[0], out _, out _))
+                        shell.HandleDeepLinkLaunch();
                 });
             }
             catch

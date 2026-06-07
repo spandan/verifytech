@@ -3,6 +3,10 @@ import { getAccessToken, getSupabaseClient } from "@/lib/supabase";
 
 const API_BASE = env.apiUrl;
 
+function networkErrorMessage(): string {
+  return `Could not reach the Certronx API (${API_BASE}). Your connection may have succeeded — wait a moment and try Connect again, or return to Certronx Agent.`;
+}
+
 async function request<T>(
   path: string,
   options?: RequestInit,
@@ -20,7 +24,13 @@ async function request<T>(
     }
     headers.Authorization = `Bearer ${token}`;
   }
-  const res = await fetch(`${API_BASE}${path}`, { ...options, headers });
+
+  let res: Response;
+  try {
+    res = await fetch(`${API_BASE}${path}`, { ...options, headers });
+  } catch {
+    throw new Error(networkErrorMessage());
+  }
   if (res.status === 401 && auth && !retried) {
     const supabase = getSupabaseClient();
     if (supabase) {
@@ -170,6 +180,12 @@ export interface AgentPairingClaimResult {
   message: string;
 }
 
+export interface AgentPairingClaimStatusResult {
+  connected: boolean;
+  pairing_code: string;
+  message: string;
+}
+
 export const api = {
   detectPlatform: () => request<{ platform: string }>("/api/agents/detect"),
   getAgent: (platform: string) => request<AgentInfo>(`/api/agents/${platform}`),
@@ -218,6 +234,12 @@ export const api = {
         method: "POST",
         body: JSON.stringify({ pairing_code: pairingCode.trim().toUpperCase() }),
       },
+      true,
+    ),
+  getAgentPairingClaimStatus: (pairingCode: string) =>
+    request<AgentPairingClaimStatusResult>(
+      `/api/agent/pairing/claim-status?pairing_code=${encodeURIComponent(pairingCode.trim().toUpperCase())}`,
+      undefined,
       true,
     ),
   renameDevice: (deviceId: string, nickname: string) =>

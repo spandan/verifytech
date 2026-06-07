@@ -67,16 +67,7 @@ class InspectionReportService:
         ] if p]
         specs_line = " · ".join(specs_parts) if specs_parts else "Specifications on file"
 
-        functional_summary = {
-            "camera": plain_functional_label(functional.get("camera_test")),
-            "microphone": plain_functional_label(functional.get("microphone_test")),
-            "speaker": plain_functional_label(functional.get("speaker_test")),
-            "keyboard": plain_keyboard(functional.get("keyboard")),
-            "touchpad": plain_touchpad(functional.get("touchpad")),
-            "usb_port": plain_functional_label(functional.get("usb_test")),
-            "audio_jack": plain_functional_label(functional.get("audio_jack_test")),
-            "screen": plain_screen(functional.get("display") or {}, display_a),
-        }
+        functional_summary = _build_functional_summary(functional, display_a)
 
         security_summary = {
             "headline": plain_security_headline(security),
@@ -189,6 +180,40 @@ class InspectionReportService:
             "summary": layer1,
             "advanced": layer2,
         }
+
+
+def _functional_test_skipped(test: Any) -> bool:
+    return isinstance(test, dict) and test.get("reason") == "skipped"
+
+
+def _legacy_block_skipped(block: Any) -> bool:
+    return isinstance(block, dict) and block.get("skipped") is True
+
+
+def _build_functional_summary(functional: dict[str, Any], display_a: dict[str, Any]) -> dict[str, str]:
+    summary: dict[str, str] = {
+        "screen": plain_screen(functional.get("display") or {}, display_a),
+    }
+
+    if not _legacy_block_skipped(functional.get("keyboard")):
+        summary["keyboard"] = plain_keyboard(functional.get("keyboard"))
+    if not _legacy_block_skipped(functional.get("touchpad")):
+        summary["touchpad"] = plain_touchpad(functional.get("touchpad"))
+
+    optional_tests = [
+        ("camera", "camera_test", plain_functional_label),
+        ("microphone", "microphone_test", plain_functional_label),
+        ("speaker", "speaker_test", plain_functional_label),
+        ("usb_port", "usb_test", plain_functional_label),
+        ("audio_jack", "audio_jack_test", plain_functional_label),
+    ]
+    for key, field, formatter in optional_tests:
+        raw = functional.get(field)
+        if _functional_test_skipped(raw):
+            continue
+        summary[key] = formatter(raw)
+
+    return summary
 
 
 def _plain_thermals(thermals: dict[str, Any]) -> str:

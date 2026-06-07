@@ -111,11 +111,16 @@ public sealed class CertificationSummaryBuilder
         var parts = new List<string>();
         if (!f.Display.Skipped)
             parts.Add($"Display — {f.Display.Grade ?? (f.Display.DeadPixelTestPassed == true ? "Pass" : "Review")}");
-        parts.Add($"Speakers — {FormatValidation(f.SpeakerTest)}");
-        parts.Add($"Microphone — {FormatValidation(f.MicrophoneTest)}");
-        parts.Add($"Camera — {FormatValidation(f.CameraTest)}");
-        parts.Add($"USB — {FormatValidation(f.UsbTest)}");
-        parts.Add($"Audio jack — {FormatValidation(f.AudioJackTest)}");
+        if (IncludeComponentTest(f.SpeakerTest))
+            parts.Add($"Speakers — {FormatValidation(f.SpeakerTest)}");
+        if (IncludeComponentTest(f.MicrophoneTest))
+            parts.Add($"Microphone — {FormatValidation(f.MicrophoneTest)}");
+        if (IncludeComponentTest(f.CameraTest))
+            parts.Add($"Camera — {FormatValidation(f.CameraTest)}");
+        if (IncludeComponentTest(f.UsbTest))
+            parts.Add($"USB — {FormatValidation(f.UsbTest)}");
+        if (IncludeComponentTest(f.AudioJackTest))
+            parts.Add($"Audio jack — {FormatValidation(f.AudioJackTest)}");
         if (!f.Keyboard.Skipped)
             parts.Add(f.Keyboard.Passed == true
                 ? "Keyboard — Pass"
@@ -124,6 +129,9 @@ public sealed class CertificationSummaryBuilder
             parts.Add($"Touchpad — {FormatTri(f.Touchpad.Operational)}");
         return parts.Count > 0 ? parts : ["All functional tests skipped"];
     }
+
+    private static bool IncludeComponentTest(ComponentValidationStatus status) =>
+        !FunctionalValidationMapper.IsUserSkipped(status);
 
     private static string FormatValidation(ComponentValidationStatus s) =>
         s.Result switch

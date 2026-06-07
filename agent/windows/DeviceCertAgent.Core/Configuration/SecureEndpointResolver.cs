@@ -142,18 +142,9 @@ public sealed class SecureEndpointResolver
         for (var i = 0; i < args.Length; i++)
         {
             var arg = args[i];
-            if (TryParseDeepLink(arg, out var pairingCode, out var certificationToken))
+            if (TryParseDeepLink(arg, out _, out _))
             {
-                if (!string.IsNullOrWhiteSpace(certificationToken))
-                {
-                    options.CertificationToken = certificationToken;
-                    options.LaunchMode = AgentLaunchMode.Certification;
-                }
-                else if (!string.IsNullOrWhiteSpace(pairingCode))
-                {
-                    options.PairingCode = pairingCode;
-                    options.LaunchMode = AgentLaunchMode.Paired;
-                }
+                options.RequestAccountCertificationFlow = true;
                 continue;
             }
 
@@ -169,15 +160,15 @@ public sealed class SecureEndpointResolver
                     options.EnhancedScanOnStartup = true;
                     break;
                 case "--paired-required":
-                    options.LaunchMode = AgentLaunchMode.Paired;
+                    options.RequestAccountCertificationFlow = true;
                     break;
                 case "--pairing-code" when i + 1 < args.Length:
-                    options.PairingCode = args[++i].Trim();
-                    options.LaunchMode = AgentLaunchMode.Paired;
+                    _ = args[++i];
+                    options.RequestAccountCertificationFlow = true;
                     break;
                 case "--token" when i + 1 < args.Length:
-                    options.CertificationToken = args[++i].Trim();
-                    options.LaunchMode = AgentLaunchMode.Certification;
+                    _ = args[++i];
+                    options.RequestAccountCertificationFlow = true;
                     break;
             }
         }
@@ -212,10 +203,12 @@ public sealed class SecureEndpointResolver
         }
 
         var code = GetQueryParam(query, "pairingCode") ?? GetQueryParam(query, "pairing_code");
-        if (string.IsNullOrWhiteSpace(code))
-            return false;
+        if (!string.IsNullOrWhiteSpace(code))
+        {
+            pairingCode = code.Trim();
+            return true;
+        }
 
-        pairingCode = code.Trim();
         return true;
     }
 

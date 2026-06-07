@@ -92,6 +92,12 @@ public partial class FunctionalTestsViewModel : ObservableObject, IAsyncDisposab
     public string HubSkipToolTip =>
         "Skip speakers, microphone, camera, touchpad, and USB. Display and keyboard checks are still required.";
 
+    public bool OptionalChecksSkipped => _optionalFlowSkipped;
+
+    public string FlowModeHint => _optionalFlowSkipped
+        ? "Display and keyboard only — optional checks were skipped."
+        : "";
+
     private static readonly string[] ExpectedKeys =
     [
         "A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M",
@@ -351,6 +357,36 @@ public partial class FunctionalTestsViewModel : ObservableObject, IAsyncDisposab
         }
     }
 
+    private void NotifyOptionalFlowChanged()
+    {
+        OnPropertyChanged(nameof(OptionalChecksSkipped));
+        OnPropertyChanged(nameof(FlowModeHint));
+    }
+
+    public void ResetForNewRun()
+    {
+        _optionalFlowSkipped = false;
+        _keysPressed.Clear();
+        KeysPressedDisplay = "";
+        ResetSpeakerUi();
+        ResetMicrophoneUi();
+        Results.Display = new DisplayFunctionalTest();
+        Results.Keyboard = new KeyboardFunctionalTest();
+        Results.Touchpad = new TouchpadFunctionalTest();
+        Results.Ports = new PortFunctionalTest();
+        Results.Camera = new CameraFunctionalTest();
+        Results.Audio = new AudioFunctionalTest();
+        Results.SpeakerTest = new SpeakerTestResult();
+        Results.MicrophoneTest = new MicrophoneTestResult();
+        Results.CameraTest = new CameraTestResult();
+        Results.UsbTest = new UsbTestResult();
+        Results.AudioJackTest = new AudioJackTestResult();
+        Results.DisplayOutputTest = new DisplayOutputTestResult();
+        CurrentStep = FunctionalTestStep.Hub;
+        NotifyOptionalFlowChanged();
+        NotifyStepChromeChanged();
+    }
+
     private void GoToHubStep()
     {
         CurrentStep = FunctionalTestStep.Hub;
@@ -421,6 +457,7 @@ public partial class FunctionalTestsViewModel : ObservableObject, IAsyncDisposab
     private void StartTests()
     {
         _optionalFlowSkipped = false;
+        NotifyOptionalFlowChanged();
         EnterDisplayStep();
     }
 
@@ -429,6 +466,7 @@ public partial class FunctionalTestsViewModel : ObservableObject, IAsyncDisposab
     {
         MarkOptionalComponentsSkipped();
         _optionalFlowSkipped = true;
+        NotifyOptionalFlowChanged();
         ResetSpeakerUi();
         ResetMicrophoneUi();
         EnterDisplayStep();
@@ -438,6 +476,8 @@ public partial class FunctionalTestsViewModel : ObservableObject, IAsyncDisposab
     {
         Results.Touchpad.Skipped = true;
         Results.Ports.Skipped = true;
+        Results.Camera.Skipped = true;
+        Results.Audio.Skipped = true;
         Results.SpeakerTest = new SpeakerTestResult
         {
             Present = true,
@@ -461,6 +501,13 @@ public partial class FunctionalTestsViewModel : ObservableObject, IAsyncDisposab
         };
         Results.UsbTest = new UsbTestResult
         {
+            Tested = false,
+            Result = ValidationResults.PresentNotTested,
+            Reason = "skipped",
+        };
+        Results.AudioJackTest = new AudioJackTestResult
+        {
+            Present = true,
             Tested = false,
             Result = ValidationResults.PresentNotTested,
             Reason = "skipped",
@@ -496,7 +543,8 @@ public partial class FunctionalTestsViewModel : ObservableObject, IAsyncDisposab
 
     private void EnterCompleteStep()
     {
-        Results.AudioJackTest = _audioJack.BuildResult();
+        if (!FunctionalValidationMapper.IsUserSkipped(Results.AudioJackTest))
+            Results.AudioJackTest = _audioJack.BuildResult();
         FunctionalTestFinalizer.Reconcile(Results);
         FunctionalValidationMapper.ApplyLegacyFields(Results);
         CurrentStep = FunctionalTestStep.Complete;

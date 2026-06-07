@@ -95,25 +95,23 @@
             </StackPanel>
           </Border>
           <StackPanel Orientation="Horizontal">
-            <Button Content="Continue without account" Style="{StaticResource SecondaryButton}"
-                    Command="{Binding BeginStandaloneCertificationCommand}" Margin="0,0,10,0"/>
-            <Button Content="I have a code from certronx.com" Style="{StaticResource SecondaryButton}"
-                    Command="{Binding OpenAccountPairingCommand}"/>
+            <Button Content="Certify this device" Style="{StaticResource PrimaryButton}"
+                    Command="{Binding BeginCertifyDeviceCommand}" Margin="0,0,10,0"/>
           </StackPanel>
           <TextBlock Style="{StaticResource BodyText}" Margin="0,14,0,0" TextWrapping="Wrap"
-                     Text="Without a pairing code, you still receive a certificate and report link — it just won't appear in your Certronx account dashboard."/>
+                     Text="Scan first and review your report before deciding to save it to your Certronx account."/>
         </StackPanel>
 
-        <!-- Unpaired waiting (agent-initiated pairing) -->
+        <!-- Account pairing (optional, before submit) -->
         <StackPanel Visibility="{Binding CurrentPage, Converter={StaticResource PageVis}, ConverterParameter=UnpairedWaiting}">
-          <TextBlock Text="Connect to Certronx" Style="{StaticResource PageTitle}" Margin="0,0,0,12"/>
+          <TextBlock Text="Save to your account" Style="{StaticResource PageTitle}" Margin="0,0,0,12"/>
           <TextBlock Style="{StaticResource BodyText}" Margin="0,0,0,16" TextWrapping="Wrap"
-                     Text="This scan is not connected to a Certronx account yet."/>
+                     Text="Link this certification to your Certronx account before you submit. Your scan results are ready — you won't scan again."/>
           <TextBlock Style="{StaticResource BodyText}" Margin="0,0,0,20" TextWrapping="Wrap"
                      Text="{Binding StatusMessage}"/>
           <Border Style="{StaticResource HeroCardBorder}" Margin="0,0,0,16">
             <StackPanel HorizontalAlignment="Center">
-              <TextBlock Text="Pairing Code" FontSize="13" Foreground="{StaticResource TextSecondaryBrush}" HorizontalAlignment="Center"/>
+              <TextBlock Text="Your pairing code" FontSize="13" Foreground="{StaticResource TextSecondaryBrush}" HorizontalAlignment="Center"/>
               <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,8,0,0">
                 <TextBlock Text="{Binding AgentPairingCode}" FontSize="36" FontWeight="Bold" FontFamily="Consolas"
                            Foreground="{StaticResource AccentBrush}" VerticalAlignment="Center"/>
@@ -130,35 +128,17 @@
                      Visibility="{Binding PairingCodeExpiredMessage, Converter={StaticResource StringNotEmptyVis}}"
                      Text="{Binding PairingCodeExpiredMessage}"/>
           <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
-            <Button Content="Open Certronx Pairing Page" Style="{StaticResource PrimaryButton}"
+            <Button Content="Pair with your account" Style="{StaticResource PrimaryButton}"
                     Command="{Binding OpenCertronxPairingPageCommand}" Margin="0,0,10,0"/>
-            <Button Content="Refresh Pairing Code" Style="{StaticResource SecondaryButton}"
+            <Button Content="Refresh code" Style="{StaticResource SecondaryButton}"
                     Command="{Binding RefreshPairingCodeCommand}" Margin="0,0,10,0"/>
             <Button Content="Exit" Style="{StaticResource SecondaryButton}" Command="{Binding CancelCommand}"/>
           </StackPanel>
-          <Button Content="Continue without account" Style="{StaticResource SecondaryButton}" HorizontalAlignment="Left"
-                  Command="{Binding ContinueWithoutAccountFromUnpairedCommand}" Margin="0,8,0,0"/>
-          <TextBlock Text="{Binding ErrorMessage}" Foreground="{StaticResource ErrorBrush}" Margin="0,12,0,0"
-                     Visibility="{Binding HasError, Converter={StaticResource BoolVis}}"/>
-        </StackPanel>
-
-        <!-- Pairing manual (account-linked path) -->
-        <StackPanel Visibility="{Binding CurrentPage, Converter={StaticResource PageVis}, ConverterParameter=PairingManual}">
-          <TextBlock Text="Connect to Certronx" Style="{StaticResource PageTitle}" Margin="0,0,0,8"/>
-          <TextBlock Style="{StaticResource BodyText}" Margin="0,0,0,16" TextWrapping="Wrap"
-                     Text="{Binding StatusMessage}"/>
-          <TextBlock Style="{StaticResource BodyText}" Margin="0,0,0,12" TextWrapping="Wrap"
-                     Visibility="{Binding PairingMandatory, Converter={StaticResource BoolVis}}"
-                     Foreground="{StaticResource AccentBrush}"
-                     Text="A pairing code is required to save this scan to your account. Get a fresh code from certronx.com/download if yours expired."/>
-          <TextBox Text="{Binding ManualPairingCode, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,12" Padding="10" FontFamily="Consolas"/>
-          <StackPanel Orientation="Horizontal">
-            <Button Content="Connect" Style="{StaticResource PrimaryButton}" Command="{Binding SubmitManualPairingCodeCommand}" Margin="0,0,10,0"/>
-            <Button Content="Back" Style="{StaticResource SecondaryButton}" Command="{Binding BackFromPairingCommand}"
-                    Visibility="{Binding ShowPairingBackButton, Converter={StaticResource BoolVis}}"/>
-            <Button Content="Exit" Style="{StaticResource SecondaryButton}" Command="{Binding CancelCommand}"
-                    Visibility="{Binding PairingMandatory, Converter={StaticResource BoolVis}}"/>
-          </StackPanel>
+          <TextBlock Style="{StaticResource BodyText}" Foreground="{StaticResource TextSecondaryBrush}" TextWrapping="Wrap" Margin="0,0,0,12"
+                     Text="Opens certronx.com with your code filled in. Sign in if prompted, then confirm Connect. You'll return to your report automatically."/>
+          <Button Content="Back to report" Style="{StaticResource SecondaryButton}" HorizontalAlignment="Left"
+                  Command="{Binding BackFromPairingToReportCommand}" Margin="0,8,0,0"
+                  Visibility="{Binding PairingForSubmit, Converter={StaticResource BoolVis}}"/>
           <TextBlock Text="{Binding ErrorMessage}" Foreground="{StaticResource ErrorBrush}" Margin="0,12,0,0"
                      Visibility="{Binding HasError, Converter={StaticResource BoolVis}}"/>
         </StackPanel>
@@ -167,8 +147,8 @@
         <StackPanel Visibility="{Binding CurrentPage, Converter={StaticResource PageVis}, ConverterParameter=EligibilityChecking}">
           <TextBlock Text="Checking eligibility" Style="{StaticResource PageTitle}" Margin="0,0,0,12"/>
           <TextBlock Style="{StaticResource BodyText}" Text="{Binding StatusMessage}" Margin="0,0,0,8"/>
-          <TextBlock Style="{StaticResource BodyText}" Foreground="{StaticResource AccentBrush}"
-                     Text="This usually takes a few seconds."/>
+          <TextBlock Style="{StaticResource BodyText}" Foreground="{StaticResource AccentBrush}" TextWrapping="Wrap"
+                     Text="This usually takes a few seconds. Scanning your device takes one to three minutes."/>
         </StackPanel>
 
         <!-- Not eligible -->
@@ -182,8 +162,10 @@
 
         <!-- Pairing connecting -->
         <StackPanel Visibility="{Binding CurrentPage, Converter={StaticResource PageVis}, ConverterParameter=PairingConnecting}">
-          <TextBlock Text="Connecting to Certronx" Style="{StaticResource PageTitle}" Margin="0,0,0,12"/>
+          <TextBlock Text="Connected to Certronx" Style="{StaticResource PageTitle}" Margin="0,0,0,12"/>
           <TextBlock Style="{StaticResource BodyText}" Text="{Binding StatusMessage}" Margin="0,0,0,8"/>
+          <TextBlock Style="{StaticResource BodyText}" Foreground="{StaticResource AccentBrush}" TextWrapping="Wrap"
+                     Text="Your account is linked. Return to your report in Certronx Agent to submit."/>
         </StackPanel>
 
         <!-- 2 Disclosure -->
@@ -318,14 +300,18 @@
               <StackPanel Visibility="{Binding CurrentStep, Converter={StaticResource FuncStepVis}, ConverterParameter=Hub}">
             <Border Style="{StaticResource CardBorder}" Margin="0,0,0,16">
               <TextBlock Style="{StaticResource BodyText}" TextWrapping="Wrap"
-                         Text="Display and keyboard are required for certification. Speakers, microphone, camera, touchpad, and USB are optional — use Skip on those steps if needed. Skipped checks are never reported as passed."/>
+                         Text="Display and keyboard are required for certification. Choose whether to run optional checks (speakers, microphone, camera, touchpad, USB) or skip them entirely."/>
             </Border>
             <StackPanel Orientation="Horizontal">
-              <Button Content="Start tests" Style="{StaticResource SecondaryButton}" Command="{Binding StartTestsCommand}" Margin="0,0,8,0"/>
-              <Button Content="Skip optional" Style="{StaticResource SecondaryButton}" Command="{Binding SkipOptionalChecksCommand}"
+              <Button Content="Run all checks" Style="{StaticResource SecondaryButton}" Command="{Binding StartTestsCommand}" Margin="0,0,8,0"/>
+              <Button Content="Display &amp; keyboard only" Style="{StaticResource SecondaryButton}" Command="{Binding SkipOptionalChecksCommand}"
                       ToolTip="{Binding HubSkipToolTip}"/>
             </StackPanel>
           </StackPanel>
+
+          <TextBlock Style="{StaticResource BodyText}" Margin="0,0,0,10" Foreground="{StaticResource AccentBrush}"
+                     Text="{Binding FlowModeHint}"
+                     Visibility="{Binding OptionalChecksSkipped, Converter={StaticResource BoolVis}}"/>
 
           <StackPanel Visibility="{Binding CurrentStep, Converter={StaticResource FuncStepVis}, ConverterParameter=Display}">
             <TextBlock Style="{StaticResource BodyText}" Margin="0,0,0,10"
@@ -686,7 +672,7 @@
             </StackPanel>
             <TextBlock Style="{StaticResource BodyText}" Margin="0,0,0,12" TextWrapping="Wrap"
                        Visibility="{Binding DataContext.IsReportReady, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource BoolVis}}"
-                       Text="Your inspection report is ready to review."/>
+                       Text="Review your inspection report before submitting."/>
             <Button Content="View inspection report" Style="{StaticResource PrimaryButton}"
                     Command="{Binding DataContext.ViewInspectionReportCommand, RelativeSource={RelativeSource AncestorType=Window}}"
                     IsEnabled="{Binding DataContext.IsReportReady, RelativeSource={RelativeSource AncestorType=Window}}"/>
@@ -707,7 +693,7 @@
           <Border Style="{StaticResource InstructionCardBorder}" Margin="0,0,0,12"
                   Visibility="{Binding ShowUnlinkedAccountBanner, Converter={StaticResource BoolVis}}">
             <TextBlock Style="{StaticResource BodyText}" TextWrapping="Wrap"
-                       Text="This scan is not linked to a Certronx account. You'll receive a certificate code and report link to share. To save future certs to your dashboard, start from certronx.com/download while signed in."/>
+                       Text="Submit to receive your certificate and report link. Optionally save to your Certronx dashboard before submitting, or add it from certronx.com after."/>
           </Border>
           <Border Style="{StaticResource HeroCardBorder}" Margin="0,0,0,12"
                   Visibility="{Binding ShowAccountLinkedBanner, Converter={StaticResource BoolVis}}">
@@ -827,6 +813,11 @@
               </ItemsControl>
             </StackPanel>
           </Border>
+          <StackPanel Orientation="Horizontal" Margin="0,0,0,12"
+                      Visibility="{Binding ShowSaveToAccountBeforeSubmit, Converter={StaticResource BoolVis}}">
+            <Button Content="Save to my account" Style="{StaticResource SecondaryButton}"
+                    Command="{Binding SaveToAccountBeforeSubmitCommand}" Margin="0,0,10,0"/>
+          </StackPanel>
           <StackPanel Orientation="Horizontal">
             <Button Content="Submit to Certronx" Style="{StaticResource AccentButton}" Command="{Binding SubmitCertificationCommand}" Margin="0,0,10,0"/>
             <Button Content="Scan again" Style="{StaticResource SecondaryButton}" Command="{Binding BackToWelcomeCommand}"/>
@@ -838,8 +829,11 @@
         <!-- 6 Submitting -->
         <StackPanel Visibility="{Binding CurrentPage, Converter={StaticResource PageVis}, ConverterParameter=Submitting}"
                     HorizontalAlignment="Center" VerticalAlignment="Center">
-          <TextBlock Text="Creating your certificate" Style="{StaticResource PageTitle}" HorizontalAlignment="Center"/>
-          <TextBlock Style="{StaticResource BodyText}" Margin="0,16,0,0" HorizontalAlignment="Center" Text="{Binding SubmissionStatus}"/>
+          <ProgressBar IsIndeterminate="True" Height="8" Width="280" Margin="0,0,0,20"/>
+          <TextBlock Text="Uploading scan results" Style="{StaticResource PageTitle}" HorizontalAlignment="Center"/>
+          <TextBlock Style="{StaticResource BodyText}" Margin="0,12,0,0" HorizontalAlignment="Center" TextWrapping="Wrap"
+                     Foreground="{StaticResource TextSecondaryBrush}"
+                     Text="This may take a moment depending on your connection."/>
         </StackPanel>
 
         <!-- 7 Certificate success -->
@@ -847,7 +841,10 @@
           <Border Background="#E6F4F1" CornerRadius="14" Padding="28" Margin="0,0,0,24">
             <StackPanel HorizontalAlignment="Center">
               <TextBlock Text="Certified" FontSize="30" FontWeight="SemiBold" Foreground="{StaticResource AccentBrush}" HorizontalAlignment="Center"/>
-              <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,14,0,0">
+              <TextBlock Style="{StaticResource BodyText}" Margin="0,10,0,0" HorizontalAlignment="Center" TextWrapping="Wrap"
+                         Foreground="{StaticResource TextSecondaryBrush}"
+                         Text="Certificate code"/>
+              <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,8,0,0">
                 <TextBlock Text="{Binding CertResult.CertificateCode}" FontSize="22" FontFamily="Consolas" VerticalAlignment="Center"/>
                 <Button Style="{StaticResource IconButton}" Command="{Binding CopyCertificateCodeCommand}"
                         Margin="8,0,0,0" VerticalAlignment="Center"
@@ -855,15 +852,6 @@
                   <Path Style="{StaticResource CopyIconPath}"/>
                 </Button>
               </StackPanel>
-              <TextBlock Style="{StaticResource BodyText}" Margin="0,10,0,0" HorizontalAlignment="Center" TextWrapping="Wrap"
-                         Text="Your certificate was signed by Certronx."
-                         Visibility="{Binding ShowCertificateLinkedToAccount, Converter={StaticResource InverseBool}}"/>
-              <TextBlock Style="{StaticResource BodyText}" Margin="0,10,0,0" HorizontalAlignment="Center" TextWrapping="Wrap"
-                         Visibility="{Binding ShowCertificateLinkedToAccount, Converter={StaticResource BoolVis}}">
-                <Run Text="Saved to "/>
-                <Run Text="{Binding LinkedAccountName}" FontWeight="SemiBold"/>
-                <Run Text=". View it anytime in your Certronx account."/>
-              </TextBlock>
             </StackPanel>
           </Border>
           <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
@@ -871,6 +859,13 @@
             <Button Content="Copy report link" Style="{StaticResource SecondaryButton}" Command="{Binding CopyReportLinkCommand}" Margin="4"/>
             <Button Content="Open report" Style="{StaticResource PrimaryButton}" Command="{Binding OpenReportCommand}" Margin="4"/>
           </StackPanel>
+          <Button Content="Save to my Certronx account" Style="{StaticResource SecondaryButton}"
+                  Command="{Binding OpenSaveToAccountPageCommand}" Margin="0,16,0,0" HorizontalAlignment="Center"
+                  Visibility="{Binding ShowSaveToAccountAfterSubmit, Converter={StaticResource BoolVis}}"/>
+          <TextBlock Style="{StaticResource BodyText}" Margin="0,10,0,0" HorizontalAlignment="Center" TextWrapping="Wrap"
+                     Foreground="{StaticResource TextSecondaryBrush}"
+                     Visibility="{Binding ShowSaveToAccountAfterSubmit, Converter={StaticResource BoolVis}}"
+                     Text="Opens certronx.com to add this certificate to My laptops."/>
           <Button Content="Done" Style="{StaticResource AccentButton}" Command="{Binding FinishCertificateCommand}" Margin="0,24,0,0" HorizontalAlignment="Center"/>
         </StackPanel>
 

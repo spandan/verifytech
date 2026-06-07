@@ -5,6 +5,7 @@ from app.db.models import Database, get_db
 from app.schemas.dto import (
     AgentPairingClaimRequest,
     AgentPairingClaimResponse,
+    AgentPairingClaimStatusResponse,
     AgentPairingCreateRequest,
     AgentPairingCreateResponse,
     AgentPairingStatusResponse,
@@ -39,6 +40,18 @@ def claim_agent_pairing(
         raise HTTPException(status_code=status, detail=detail)
 
 
+@router.get("/claim-status", response_model=AgentPairingClaimStatusResponse)
+def get_agent_pairing_claim_status(
+    pairing_code: str = Query(min_length=6, max_length=6),
+    user: AuthUser = Depends(get_current_user),
+    db: Database = Depends(get_db),
+):
+    try:
+        return _service.claim_status(db, user_id=user.id, pairing_code=pairing_code)
+    except ValueError as e:
+        raise HTTPException(status_code=422, detail=str(e))
+
+
 @router.get("/status", response_model=AgentPairingStatusResponse)
 def get_agent_pairing_status(
     pairing_code: str = Query(min_length=6, max_length=6),
@@ -47,5 +60,16 @@ def get_agent_pairing_status(
 ):
     try:
         return _service.status(db, pairing_code=pairing_code, device_nonce=device_nonce)
+    except ValueError as e:
+        raise HTTPException(status_code=422, detail=str(e))
+
+
+@router.get("/status-for-device", response_model=AgentPairingStatusResponse)
+def get_agent_pairing_status_for_device(
+    device_nonce: str = Query(min_length=8),
+    db: Database = Depends(get_db),
+):
+    try:
+        return _service.status_for_device(db, device_nonce=device_nonce)
     except ValueError as e:
         raise HTTPException(status_code=422, detail=str(e))

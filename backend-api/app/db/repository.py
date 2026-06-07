@@ -315,10 +315,45 @@ class Database:
         rows = result.data or []
         return rows[0] if rows else None
 
+    def get_agent_pairing_paired_by_device_nonce(self, device_nonce: str) -> dict[str, Any] | None:
+        result = (
+            self.client.table("agent_pairing_sessions")
+            .select("*")
+            .eq("device_nonce", device_nonce)
+            .eq("status", "PAIRED")
+            .order("paired_at", desc=True)
+            .limit(1)
+            .execute()
+        )
+        rows = result.data or []
+        return rows[0] if rows else None
+
+    def expire_pending_agent_pairings_for_device(self, device_nonce: str) -> None:
+        (
+            self.client.table("agent_pairing_sessions")
+            .update({"status": "EXPIRED"})
+            .eq("device_nonce", device_nonce)
+            .eq("status", "PENDING")
+            .execute()
+        )
+
     def update_agent_pairing_session(self, pairing_code: str, updates: dict[str, Any]) -> None:
         self.client.table("agent_pairing_sessions").update(updates).eq(
             "pairing_code", pairing_code.upper()
         ).execute()
+
+    def claim_agent_pairing_session_if_pending(
+        self, pairing_code: str, updates: dict[str, Any]
+    ) -> bool:
+        result = (
+            self.client.table("agent_pairing_sessions")
+            .update(updates)
+            .eq("pairing_code", pairing_code.upper())
+            .eq("status", "PENDING")
+            .execute()
+        )
+        rows = result.data or []
+        return len(rows) > 0
 
     # ── Scan reports & account ───────────────────────────────────────────────
 

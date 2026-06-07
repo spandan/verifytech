@@ -17,6 +17,8 @@ public static class FunctionalTestFinalizer
     private static void ReconcileMicrophone(FunctionalCertificationResults f)
     {
         var t = f.MicrophoneTest;
+        if (FunctionalValidationMapper.IsUserSkipped(t))
+            return;
         if (t.Result == ValidationResults.Passed)
             return;
 
@@ -39,6 +41,9 @@ public static class FunctionalTestFinalizer
 
     private static void ReconcileAudioJack(FunctionalCertificationResults f, PortInventoryAssessment? ports)
     {
+        if (FunctionalValidationMapper.IsUserSkipped(f.AudioJackTest))
+            return;
+
         if (ports?.AudioJack.Value == false)
         {
             f.AudioJackTest.Present = false;

@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Collapsible } from "@/components/Collapsible";
 import { CopyableCode } from "@/components/CopyableCode";
-import { api, type AgentInfo, type CertificationSession } from "@/lib/api";
+import { api, type AgentInfo } from "@/lib/api";
 import { trackEvent } from "@/lib/analytics";
 import { useAuth } from "@/lib/auth-context";
 import { env } from "@/lib/env";
@@ -13,11 +13,13 @@ import { getRecommendedPlatform } from "@/components/OSDetector";
 
 type DeviceChoice = "laptop" | "desktop" | null;
 
+const AGENT_DEEP_LINK = "certronx://scan/start";
+
 const FLOW_STEPS = [
-  { step: "1", title: "Choose device type", desc: "Certronx Phase 1 certifies Windows laptops." },
-  { step: "2", title: "Launch agent", desc: "Opens Certronx Agent with a signed session token." },
-  { step: "3", title: "Eligibility check", desc: "Know within seconds if this device can be certified." },
-  { step: "4", title: "Certificate", desc: "Scan, upload, and save to your account." },
+  { step: "1", title: "Download agent", desc: "Install Certronx Agent on the Windows laptop you are certifying." },
+  { step: "2", title: "Scan this PC", desc: "Run the hardware scan and interactive checks — no account required yet." },
+  { step: "3", title: "Review & submit", desc: "See your inspection report, then submit for a signed certificate." },
+  { step: "4", title: "Save (optional)", desc: "Link your account before submit, or add the certificate to My laptops afterward." },
 ];
 
 export default function DownloadPage() {
@@ -27,8 +29,8 @@ export default function DownloadPage() {
   const [platform, setPlatform] = useState("windows");
   const [error, setError] = useState("");
   const [deviceChoice, setDeviceChoice] = useState<DeviceChoice>(null);
-  const [session, setSession] = useState<CertificationSession | null>(null);
   const [launchBusy, setLaunchBusy] = useState(false);
+  const [launchHint, setLaunchHint] = useState("");
 
   useEffect(() => {
     const p = getRecommendedPlatform();
@@ -41,7 +43,7 @@ export default function DownloadPage() {
       });
   }, []);
 
-  const startLaptopCertification = useCallback(async () => {
+  const openAgentOnThisPc = useCallback(() => {
     if (!userId) {
       router.push("/login?next=/download");
       return;
@@ -49,22 +51,17 @@ export default function DownloadPage() {
 
     setLaunchBusy(true);
     setError("");
-    setSession(null);
+    setLaunchHint("");
 
-    try {
-      const created = await api.createCertificationSession("laptop");
-      setSession(created);
-      trackEvent("CertificationSessionCreated", {
-        expected_device_type: created.expected_device_type,
-        expires_at: created.expires_at,
-      });
-      trackEvent("DeepLinkLaunchAttempted");
-      window.location.href = created.deep_link;
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Could not start certification.");
-    } finally {
+    trackEvent("DeepLinkLaunchAttempted");
+    window.location.href = AGENT_DEEP_LINK;
+
+    window.setTimeout(() => {
+      setLaunchHint(
+        "If Certronx Agent did not open, install it below then run it from the Start menu. Choose Certify with Certronx account, then Pair with your account.",
+      );
       setLaunchBusy(false);
-    }
+    }, 2500);
   }, [router, userId]);
 
   const isSupported = platform === "windows";
@@ -77,7 +74,8 @@ export default function DownloadPage() {
             <p className="text-sm font-medium text-[var(--color-brand)]">Certify a device</p>
             <h1 className="page-title mt-2">Certify with Certronx</h1>
             <p className="page-subtitle mx-auto">
-              Phase 1 supports Windows 10 and 11 laptops. Eligibility is checked in seconds before any full scan.
+              Phase 1 supports Windows 10 and 11 laptops. Scan first, review your report, then optionally save to your
+              account.
             </p>
           </div>
           <div className="flow-steps mx-auto mt-10 max-w-4xl">
@@ -165,20 +163,14 @@ export default function DownloadPage() {
                   type="button"
                   className="btn btn-brand btn-block"
                   disabled={launchBusy}
-                  onClick={() => void startLaptopCertification()}
+                  onClick={openAgentOnThisPc}
                 >
-                  {launchBusy ? "Creating certification session…" : "Certify Device"}
+                  {launchBusy ? "Opening Certronx Agent…" : "Open Certronx Agent on this PC"}
                 </button>
 
-                {session && (
+                {launchHint && (
                   <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-subtle)] p-4 text-sm space-y-2">
-                    <p className="font-medium text-[var(--color-brand)]">
-                      Waiting for Certronx Agent to open…
-                    </p>
-                    <p className="text-secondary">
-                      Your signed session expires at {new Date(session.expires_at).toLocaleTimeString()}.
-                      No pairing code is required.
-                    </p>
+                    <p className="font-medium text-[var(--color-brand)]">{launchHint}</p>
                     {agent && (
                       <a href={agent.full_download_url} className="btn btn-secondary btn-sm inline-flex">
                         Download Windows Agent
@@ -188,11 +180,8 @@ export default function DownloadPage() {
                 )}
 
                 <p className="text-sm text-secondary">
-                  Agent already open without a token?{" "}
-                  <Link href="/pair" className="text-[var(--color-brand)] hover:underline">
-                    Enter the pairing code from the agent
-                  </Link>
-                  .
+                  In the agent, choose <strong>Certify this device</strong>. After you review the report, use{" "}
+                  <strong>Save to my account</strong> or add the certificate on certronx.com once you have your code.
                 </p>
               </>
             )}

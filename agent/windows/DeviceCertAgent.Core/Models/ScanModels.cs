@@ -107,6 +107,8 @@ public sealed class AppLaunchOptions
     public bool MockApi { get; set; }
     public bool Headless { get; set; }
     public bool EnhancedScanOnStartup { get; set; }
+    /// <summary>Opened via certronx://scan/start or --paired-required — skip welcome and start account pairing.</summary>
+    public bool RequestAccountCertificationFlow { get; set; }
 }
 
 public sealed class EndpointSettings

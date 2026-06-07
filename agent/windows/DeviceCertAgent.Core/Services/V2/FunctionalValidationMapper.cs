@@ -6,6 +6,9 @@ namespace DeviceCertAgent.Core.Services.V2;
 /// <summary>Maps v2.3 validation results to legacy TriState/tier2 fields for backward compatibility.</summary>
 public static class FunctionalValidationMapper
 {
+    public static bool IsUserSkipped(ComponentValidationStatus? status) =>
+        status is { Reason: "skipped" };
+
     public static void ApplyLegacyFields(FunctionalCertificationResults f)
     {
         SyncCamera(f);
@@ -35,7 +38,7 @@ public static class FunctionalValidationMapper
         f.Camera.FrameRateFps = t.Fps;
         f.Camera.FeedConfirmed = t.UserConfirmed && t.Result == ValidationResults.Passed;
         f.Camera.ValidationTimestamp = t.Tested ? DateTime.UtcNow.ToString("o") : null;
-        f.Camera.Skipped = !t.Tested && t.Result == ValidationResults.PresentNotTested;
+        f.Camera.Skipped = IsUserSkipped(t) || (!t.Tested && t.Result == ValidationResults.PresentNotTested);
         f.Camera.CameraOperational = t.Result switch
         {
             ValidationResults.Passed => TriStateValue.Verified(true, "user", "camera_live_preview"),
@@ -56,7 +59,8 @@ public static class FunctionalValidationMapper
         f.Audio.PlaybackConfirmed = t.PlaybackConfirmed
             ? TriStateValue.Verified(true, "user", "local_playback")
             : TriStateValue.Unknown("local_playback");
-        f.Audio.Skipped = !t.Tested && t.Result == ValidationResults.PresentNotTested;
+        f.Audio.Skipped = IsUserSkipped(t) || IsUserSkipped(f.SpeakerTest)
+            || (!t.Tested && t.Result == ValidationResults.PresentNotTested);
         f.Audio.MicrophoneWorking = t.Result switch
         {
             ValidationResults.Passed => TriStateValue.Verified(true, "user", "microphone_test"),
@@ -80,7 +84,7 @@ public static class FunctionalValidationMapper
     {
         var t = f.UsbTest;
         f.Ports.UsbDeviceDetected = t.InsertDetected;
-        f.Ports.Skipped = !t.Tested;
+        f.Ports.Skipped = IsUserSkipped(t) || f.Ports.Skipped || !t.Tested;
         f.Ports.Operational = t.Result switch
         {
             ValidationResults.Passed => TriStateValue.Verified(true, "usb_hotplug", "insert_remove"),
