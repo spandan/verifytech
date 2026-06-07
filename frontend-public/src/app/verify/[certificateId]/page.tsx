@@ -2,9 +2,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { BuyerDeviceSummary } from "@/components/BuyerDeviceSummary";
-import { ShareCertificateSection } from "@/components/ShareCertificateSection";
 import { ShareCertificateClient } from "@/components/ShareCertificateClient";
-import { CopyableVerificationUrl } from "@/components/CopyableVerificationUrl";
+import { VerificationQrSharePanel } from "@/components/VerificationQrSharePanel";
 import { api } from "@/lib/api";
 import { buildCertificationSummary } from "@/lib/certification-summary";
 
@@ -41,20 +40,7 @@ export default async function VerifyCertificatePage({ params }: Props) {
 
       <BuyerDeviceSummary summary={summary} />
 
-      <section className="card card-body mt-6">
-        <div className="flex flex-col items-center gap-4 sm:flex-row sm:items-start sm:justify-between">
-          <div className="space-y-2 text-center sm:text-left">
-            <p className="text-sm font-medium text-secondary">Verification URL</p>
-            <CopyableVerificationUrl url={summary.verificationUrl} />
-            <p className="text-sm text-muted">
-              Share this link with buyers so they can confirm the certification before purchase.
-            </p>
-          </div>
-          <VerificationQrCode url={summary.verificationUrl} size={120} />
-        </div>
-      </section>
-
-      <ShareCertificateSection summary={summary} />
+      <VerificationQrSharePanel summary={summary} />
 
       <div className="mt-8 flex flex-wrap justify-center gap-3">
         <Link href={`/c/${cert.certificate_code}`} className="btn btn-brand">
