@@ -1,9 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
-import { BuyerDeviceSummary } from "@/components/BuyerDeviceSummary";
+import { SellCertifiedDeviceSection } from "@/components/SellCertifiedDeviceSection";
 import { ShareCertificateClient } from "@/components/ShareCertificateClient";
-import { VerificationQrSharePanel } from "@/components/VerificationQrSharePanel";
 import { api } from "@/lib/api";
 import { buildCertificationSummary } from "@/lib/certification-summary";
 
@@ -25,22 +24,10 @@ export default async function VerifyCertificatePage({ params }: Props) {
   const summary = buildCertificationSummary(cert);
 
   return (
-    <div className="page-container page-container--narrow py-10 md:py-14">
+    <div className="page-container py-10 md:py-14">
       <ShareCertificateClient event="VerificationViewed" certificateId={cert.certificate_code} />
 
-      <div className="verified-banner">
-        <span className="verified-banner__icon">✓</span>
-        <div>
-          <p className="verified-banner__title">Verified by Certronx</p>
-          <p className="verified-banner__subtitle">
-            This certificate is registered in the Certronx trust platform.
-          </p>
-        </div>
-      </div>
-
-      <BuyerDeviceSummary summary={summary} />
-
-      <VerificationQrSharePanel summary={summary} />
+      <SellCertifiedDeviceSection summary={summary} />
 
       <div className="mt-8 flex flex-wrap justify-center gap-3">
         <Link href={`/c/${cert.certificate_code}`} className="btn btn-brand">

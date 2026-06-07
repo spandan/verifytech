@@ -6,6 +6,13 @@ export interface CertificationSummary {
   verificationUrl: string;
   manufacturer: string;
   model: string;
+  deviceType: string;
+  platform: string;
+  certificateLevel: string;
+  status: string;
+  expiresAt: string;
+  coreTestsPassed: number;
+  coreTestsTotal: number;
   cpu: string;
   ramGb: number;
   storageGb: number;
@@ -13,6 +20,7 @@ export interface CertificationSummary {
   batteryHealthPercent?: number;
   overallScore: number;
   condition: string;
+  verificationConfidence: string;
   certificationDate: string;
 }
 
@@ -36,6 +44,23 @@ export function scoreToCondition(score: number): string {
   if (score >= 70) return "Good";
   if (score >= 50) return "Fair";
   return "Needs Attention";
+}
+
+export function verificationConfidenceLabel(score: number): string {
+  if (score >= 90) return "High";
+  if (score >= 75) return "Moderate";
+  return "Limited";
+}
+
+function formatDeviceType(deviceType: string, platform: string): string {
+  const normalized = deviceType.trim().replace(/_/g, " ");
+  const label = normalized
+    ? normalized.charAt(0).toUpperCase() + normalized.slice(1)
+    : "Device";
+  const platformLabel = platform.trim().replace(/_/g, " ");
+  if (!platformLabel || platformLabel.toLowerCase() === "unknown") return label;
+  const platformTitle = platformLabel.charAt(0).toUpperCase() + platformLabel.slice(1);
+  return `${platformTitle} ${label}`;
 }
 
 export function buildVerificationUrl(certificateId: string, siteUrl = env.siteUrl): string {
@@ -236,6 +261,13 @@ export function buildCertificationSummary(
     verificationUrl: buildVerificationUrl(cert.certificate_code, siteUrl),
     manufacturer: cert.manufacturer || "Unknown",
     model: cert.model || cert.device_name,
+    deviceType: formatDeviceType(cert.device_type, cert.platform),
+    platform: cert.platform || "Unknown",
+    certificateLevel: cert.certificate_level || "Standard",
+    status: cert.status || "active",
+    expiresAt: cert.expires_at,
+    coreTestsPassed: cert.core_tests_passed?.length ?? 0,
+    coreTestsTotal: cert.core_tests_total ?? 0,
     cpu: specs.cpu,
     ramGb: specs.ramGb,
     storageGb: specs.storageGb,
@@ -243,6 +275,7 @@ export function buildCertificationSummary(
     batteryHealthPercent: cert.battery_health_percent ?? undefined,
     overallScore,
     condition: scoreToCondition(overallScore),
+    verificationConfidence: verificationConfidenceLabel(overallScore),
     certificationDate: cert.certification_date,
   };
 }

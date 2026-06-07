@@ -1,19 +1,13 @@
 "use client";
 
-import { CertificateShareIcons } from "@/components/share/CertificateShareIcons";
+import { SellCertifiedDeviceSection } from "@/components/SellCertifiedDeviceSection";
 import type { CertificationSummary } from "@/lib/certification-summary";
 
+/** Seller-focused resale trust document (replaces legacy share certificate UI). */
 export function ShareCertificateSection({ summary }: { summary: CertificationSummary }) {
   return (
-    <section className="card card-body mt-8 share-certificate">
-      <div className="share-certificate__header">
-        <h2 className="text-lg font-semibold">Share Certificate</h2>
-        <p className="mt-1 text-sm text-secondary">
-          Copy a marketplace listing, share verification, or download a PDF certificate for buyers.
-        </p>
-      </div>
-
-      <CertificateShareIcons summary={summary} />
-    </section>
+    <div className="mt-8">
+      <SellCertifiedDeviceSection summary={summary} />
+    </div>
   );
 }

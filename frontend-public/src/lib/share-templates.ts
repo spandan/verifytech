@@ -5,6 +5,10 @@ function batteryLine(summary: CertificationSummary): string {
   return `Battery Health: ${Math.round(summary.batteryHealthPercent)}%`;
 }
 
+export function marketplaceListingTitle(summary: CertificationSummary): string {
+  return `${summary.manufacturer} ${summary.model} — Certronx Certified`;
+}
+
 export function genericListingTemplate(summary: CertificationSummary): string {
   return [
     "💻 Certronx Certified Laptop",
