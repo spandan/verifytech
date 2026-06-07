@@ -282,6 +282,44 @@ class Database:
     def update_scan_pairing_session(self, pairing_code: str, updates: dict[str, Any]) -> None:
         self.client.table("scan_pairing_sessions").update(updates).eq("pairing_code", pairing_code).execute()
 
+    def create_certification_session(self, payload: dict[str, Any]) -> dict[str, Any]:
+        payload = {"id": str(uuid4()), **payload}
+        return self._insert("certification_sessions", payload)
+
+    def get_certification_session(self, session_id: str) -> dict[str, Any] | None:
+        return self._first("certification_sessions", session_id=session_id)
+
+    def get_certification_session_by_id(self, certification_id: str) -> dict[str, Any] | None:
+        return self._first("certification_sessions", id=certification_id)
+
+    def update_certification_session(self, session_id: str, updates: dict[str, Any]) -> None:
+        self.client.table("certification_sessions").update(updates).eq("session_id", session_id).execute()
+
+    def create_agent_pairing_session(self, payload: dict[str, Any]) -> dict[str, Any]:
+        payload = {"id": str(uuid4()), **payload}
+        return self._insert("agent_pairing_sessions", payload)
+
+    def get_agent_pairing_session(self, pairing_code: str) -> dict[str, Any] | None:
+        return self._first("agent_pairing_sessions", pairing_code=pairing_code.upper())
+
+    def get_agent_pairing_session_by_device_nonce(self, device_nonce: str) -> dict[str, Any] | None:
+        result = (
+            self.client.table("agent_pairing_sessions")
+            .select("*")
+            .eq("device_nonce", device_nonce)
+            .eq("status", "PENDING")
+            .order("created_at", desc=True)
+            .limit(1)
+            .execute()
+        )
+        rows = result.data or []
+        return rows[0] if rows else None
+
+    def update_agent_pairing_session(self, pairing_code: str, updates: dict[str, Any]) -> None:
+        self.client.table("agent_pairing_sessions").update(updates).eq(
+            "pairing_code", pairing_code.upper()
+        ).execute()
+
     # ── Scan reports & account ───────────────────────────────────────────────
 
     def create_scan_report(self, payload: dict[str, Any]) -> ScanReport:

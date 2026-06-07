@@ -53,6 +53,75 @@ public sealed class ScanSessionFlowService : IDisposable
         }
     }
 
+    public async Task<CertificationSessionValidateResponse> ValidateCertificationSessionAsync(
+        string token,
+        CancellationToken ct = default)
+    {
+        var endpoint = _api.EndpointUrl("api/certification-sessions/validate");
+        _logger.Info($"Validating certification session at {endpoint}");
+        try
+        {
+            return await _api.ValidateCertificationSessionAsync(token, ct);
+        }
+        catch (Exception ex)
+        {
+            _logger.Error($"Certification validation failed at {endpoint}", ex);
+            throw MapFriendly(ex, endpoint, "Session validation failed");
+        }
+    }
+
+    public async Task<ScanPairingExchangeResponse> BeginCertificationScanAsync(
+        string token,
+        string deviceFingerprint,
+        CancellationToken ct = default)
+    {
+        var endpoint = _api.EndpointUrl("api/certification-sessions/begin-scan");
+        _logger.Info($"Beginning certification scan at {endpoint}");
+        try
+        {
+            return await _api.BeginCertificationScanAsync(token, deviceFingerprint, ct);
+        }
+        catch (Exception ex)
+        {
+            _logger.Error($"Certification begin-scan failed at {endpoint}", ex);
+            throw MapFriendly(ex, endpoint, "Could not start certification scan");
+        }
+    }
+
+    public async Task<AgentPairingCreateResponse> CreateAgentPairingAsync(
+        string deviceNonce,
+        CancellationToken ct = default)
+    {
+        var endpoint = _api.EndpointUrl("api/agent/pairing/create");
+        _logger.Info($"Creating agent pairing session at {endpoint}");
+        try
+        {
+            return await _api.CreateAgentPairingAsync(deviceNonce, ct);
+        }
+        catch (Exception ex)
+        {
+            _logger.Error($"Agent pairing create failed at {endpoint}", ex);
+            throw MapFriendly(ex, endpoint, "Could not create pairing code");
+        }
+    }
+
+    public async Task<AgentPairingStatusResponse> GetAgentPairingStatusAsync(
+        string pairingCode,
+        string deviceNonce,
+        CancellationToken ct = default)
+    {
+        var endpoint = _api.EndpointUrl("api/agent/pairing/status");
+        try
+        {
+            return await _api.GetAgentPairingStatusAsync(pairingCode, deviceNonce, ct);
+        }
+        catch (Exception ex)
+        {
+            _logger.Error($"Agent pairing status failed at {endpoint}", ex);
+            throw MapFriendly(ex, endpoint, "Could not check pairing status");
+        }
+    }
+
     public async Task<ScanSessionSubmitResponse> SubmitAsync(
         ScanSessionStartResponse session,
         CollectionResult collected,

@@ -142,10 +142,18 @@ public sealed class SecureEndpointResolver
         for (var i = 0; i < args.Length; i++)
         {
             var arg = args[i];
-            if (TryParseDeepLink(arg, out var pairingCode))
+            if (TryParseDeepLink(arg, out var pairingCode, out var certificationToken))
             {
-                options.PairingCode = pairingCode;
-                options.LaunchMode = AgentLaunchMode.Paired;
+                if (!string.IsNullOrWhiteSpace(certificationToken))
+                {
+                    options.CertificationToken = certificationToken;
+                    options.LaunchMode = AgentLaunchMode.Certification;
+                }
+                else if (!string.IsNullOrWhiteSpace(pairingCode))
+                {
+                    options.PairingCode = pairingCode;
+                    options.LaunchMode = AgentLaunchMode.Paired;
+                }
                 continue;
             }
 
@@ -167,15 +175,21 @@ public sealed class SecureEndpointResolver
                     options.PairingCode = args[++i].Trim();
                     options.LaunchMode = AgentLaunchMode.Paired;
                     break;
+                case "--token" when i + 1 < args.Length:
+                    options.CertificationToken = args[++i].Trim();
+                    options.LaunchMode = AgentLaunchMode.Certification;
+                    break;
             }
         }
 
+        options.DeviceNonce = Guid.NewGuid().ToString("N");
         return options;
     }
 
-    public static bool TryParseDeepLink(string arg, out string pairingCode)
+    public static bool TryParseDeepLink(string arg, out string pairingCode, out string certificationToken)
     {
         pairingCode = "";
+        certificationToken = "";
         if (string.IsNullOrWhiteSpace(arg))
             return false;
 
@@ -190,6 +204,13 @@ public sealed class SecureEndpointResolver
             return false;
 
         var query = uri.Query;
+        var token = GetQueryParam(query, "token");
+        if (!string.IsNullOrWhiteSpace(token))
+        {
+            certificationToken = token.Trim();
+            return true;
+        }
+
         var code = GetQueryParam(query, "pairingCode") ?? GetQueryParam(query, "pairing_code");
         if (string.IsNullOrWhiteSpace(code))
             return false;

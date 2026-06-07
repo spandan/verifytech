@@ -7,6 +7,8 @@ public static class AgentConfig
 {
     public const string ProductionApiBaseUrl = "https://verifytech-production.up.railway.app";
     public const string StagingApiBaseUrl = "https://verifytech-staging.up.railway.app";
+    public const string ProductionPublicBaseUrl = "https://certronx.com";
+    public const string StagingPublicBaseUrl = "https://certronx.com";
 
     public const string AppEnvProduction = "production";
     public const string AppEnvStaging = "staging";
@@ -23,4 +25,11 @@ public static class AgentConfig
         Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "1.0.0";
 
     public static string ProductName => "VerifyTech Agent";
+
+    public static string PublicBaseUrlFor(string appEnv) => appEnv switch
+    {
+        AppEnvStaging => StagingPublicBaseUrl,
+        AppEnvDevelopment => "http://localhost:3000",
+        _ => ProductionPublicBaseUrl,
+    };
 }

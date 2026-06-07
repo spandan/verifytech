@@ -24,6 +24,8 @@ TRUNCATE TABLE
     account_scan_link_tokens,
     scan_sessions,
     scan_pairing_sessions,
+    agent_pairing_sessions,
+    certification_sessions,
     certificate_events,
     verification_attempts,
     certificates,

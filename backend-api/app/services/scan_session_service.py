@@ -29,6 +29,7 @@ from app.services.inspection_report_service import InspectionReportService
 from app.services.report_service import ReportService
 from app.services.scan_report_service import ScanReportService, extract_assessment_metadata
 from app.services.scan_pairing_service import ScanPairingService
+from app.services.certification_session_service import CertificationSessionService
 
 
 class ScanSessionService:
@@ -40,6 +41,7 @@ class ScanSessionService:
         self._scan_reports = ScanReportService()
         self._account = AccountService()
         self._pairing = ScanPairingService()
+        self._certification = CertificationSessionService()
 
     def start(self, db: Database, body: ScanSessionStartRequest) -> ScanSessionStartResponse:
         if body.platform.lower() != "windows":
@@ -171,6 +173,7 @@ class ScanSessionService:
             pairing = db.get_scan_pairing_session_by_id(session.pairing_session_id)
             pairing_code = pairing.get("pairing_code") if pairing else None
         self._pairing.mark_uploaded(db, pairing_code)
+        self._certification.mark_uploaded(db, session.certification_session_id)
 
         self._audit.log(
             db,

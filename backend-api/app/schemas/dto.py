@@ -220,6 +220,75 @@ class ScanUploadRequest(BaseModel):
     evidence_artifacts: list[EvidenceArtifactUpload] = Field(default_factory=list)
 
 
+class CertificationSessionCreateRequest(BaseModel):
+    expected_device_type: str = Field(default="laptop", alias="expectedDeviceType")
+    business_id: Optional[str] = Field(default=None, alias="businessId")
+
+    model_config = {"populate_by_name": True}
+
+
+class CertificationSessionCreateResponse(BaseModel):
+    session_id: str
+    token: str
+    expires_at: datetime
+    expires_in_seconds: int
+    deep_link: str
+    expected_device_type: str
+
+
+class CertificationSessionValidateRequest(BaseModel):
+    token: str = Field(min_length=16)
+
+
+class CertificationSessionValidateResponse(BaseModel):
+    session_id: str
+    user_id: str
+    expected_device_type: str
+    linked_account_name: Optional[str] = None
+
+
+class CertificationSessionBeginScanRequest(BaseModel):
+    token: str = Field(min_length=16)
+    device_fingerprint: str = Field(min_length=16, max_length=128)
+    agent_version: str = Field(min_length=1, max_length=32)
+
+
+class CertificationSessionBeginScanResponse(BaseModel):
+    upload_token: str
+    expires_in_seconds: int
+    scan_session_id: str
+    linked_account_name: Optional[str] = None
+
+
+class AgentPairingCreateRequest(BaseModel):
+    device_nonce: str = Field(min_length=8, max_length=128)
+
+
+class AgentPairingCreateResponse(BaseModel):
+    pairing_code: str
+    expires_in_minutes: int
+    expires_at: datetime
+
+
+class AgentPairingClaimRequest(BaseModel):
+    pairing_code: str = Field(min_length=6, max_length=6)
+
+
+class AgentPairingClaimResponse(BaseModel):
+    pairing_code: str
+    session_id: str
+    user_id: str
+    message: str
+
+
+class AgentPairingStatusResponse(BaseModel):
+    status: str
+    user_id: Optional[str] = None
+    session_id: Optional[str] = None
+    certification_token: Optional[str] = None
+    expires_at: Optional[datetime] = None
+
+
 # ─── Verification ─────────────────────────────────────────────────────────────
 
 class VerifyLookupRequest(BaseModel):

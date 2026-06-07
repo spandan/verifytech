@@ -103,6 +103,63 @@ public sealed class ApiClient : IDisposable
         return result ?? throw new InvalidOperationException("Empty pairing exchange response.");
     }
 
+    public async Task<CertificationSessionValidateResponse> ValidateCertificationSessionAsync(
+        string token,
+        CancellationToken ct = default)
+    {
+        var body = new Dictionary<string, object?> { ["token"] = token.Trim() };
+        var response = await SendWithRetryAsync(
+            () => _http.PostAsJsonAsync("api/certification-sessions/validate", body, JsonOptions, ct),
+            ct);
+        await EnsureSuccessAsync(response);
+        var result = await response.Content.ReadFromJsonAsync<CertificationSessionValidateResponse>(JsonOptions, ct);
+        return result ?? throw new InvalidOperationException("Empty certification validation response.");
+    }
+
+    public async Task<ScanPairingExchangeResponse> BeginCertificationScanAsync(
+        string token,
+        string deviceFingerprint,
+        CancellationToken ct = default)
+    {
+        var body = new Dictionary<string, object?>
+        {
+            ["token"] = token.Trim(),
+            ["device_fingerprint"] = deviceFingerprint,
+            ["agent_version"] = _agentVersion,
+        };
+        var response = await SendWithRetryAsync(
+            () => _http.PostAsJsonAsync("api/certification-sessions/begin-scan", body, JsonOptions, ct),
+            ct);
+        await EnsureSuccessAsync(response);
+        var result = await response.Content.ReadFromJsonAsync<ScanPairingExchangeResponse>(JsonOptions, ct);
+        return result ?? throw new InvalidOperationException("Empty certification begin-scan response.");
+    }
+
+    public async Task<AgentPairingCreateResponse> CreateAgentPairingAsync(
+        string deviceNonce,
+        CancellationToken ct = default)
+    {
+        var body = new Dictionary<string, object?> { ["device_nonce"] = deviceNonce.Trim() };
+        var response = await SendWithRetryAsync(
+            () => _http.PostAsJsonAsync("api/agent/pairing/create", body, JsonOptions, ct),
+            ct);
+        await EnsureSuccessAsync(response);
+        var result = await response.Content.ReadFromJsonAsync<AgentPairingCreateResponse>(JsonOptions, ct);
+        return result ?? throw new InvalidOperationException("Empty agent pairing create response.");
+    }
+
+    public async Task<AgentPairingStatusResponse> GetAgentPairingStatusAsync(
+        string pairingCode,
+        string deviceNonce,
+        CancellationToken ct = default)
+    {
+        var query = $"api/agent/pairing/status?pairing_code={Uri.EscapeDataString(pairingCode.Trim())}&device_nonce={Uri.EscapeDataString(deviceNonce.Trim())}";
+        var response = await SendWithRetryAsync(() => _http.GetAsync(query, ct), ct);
+        await EnsureSuccessAsync(response);
+        var result = await response.Content.ReadFromJsonAsync<AgentPairingStatusResponse>(JsonOptions, ct);
+        return result ?? throw new InvalidOperationException("Empty agent pairing status response.");
+    }
+
     public async Task<ScanSessionSubmitResponse> UploadPairedScanAsync(
         string uploadToken,
         ScanSessionSubmitPayload payload,

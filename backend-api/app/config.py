@@ -44,8 +44,11 @@ class Settings(BaseSettings):
     allowed_agent_versions: str = "0.1.0,0.2.0,1.0.0,2.0.0,2.1.0,2.3.0"
 
     scan_pairing_ttl_minutes: int = 2
+    agent_pairing_ttl_minutes: int = 10
     scan_upload_token_ttl_seconds: int = 300
     scan_upload_jwt_secret: str = ""
+    certification_session_token_ttl_seconds: int = 900
+    certification_session_jwt_secret: str = ""
 
     # Supabase Auth JWT validation (Project Settings → API → JWT Secret)
     supabase_jwt_secret: str = ""

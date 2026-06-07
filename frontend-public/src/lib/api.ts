@@ -154,6 +154,22 @@ export interface ScanPairingSession {
   deep_link: string;
 }
 
+export interface CertificationSession {
+  session_id: string;
+  token: string;
+  expires_at: string;
+  expires_in_seconds: number;
+  deep_link: string;
+  expected_device_type: string;
+}
+
+export interface AgentPairingClaimResult {
+  pairing_code: string;
+  session_id: string;
+  user_id: string;
+  message: string;
+}
+
 export const api = {
   detectPlatform: () => request<{ platform: string }>("/api/agents/detect"),
   getAgent: (platform: string) => request<AgentInfo>(`/api/agents/${platform}`),
@@ -180,6 +196,27 @@ export const api = {
       {
         method: "POST",
         body: JSON.stringify(businessId ? { business_id: businessId } : {}),
+      },
+      true,
+    ),
+  createCertificationSession: (expectedDeviceType: "laptop" | "desktop" = "laptop", businessId?: string) =>
+    request<CertificationSession>(
+      "/api/certification-sessions",
+      {
+        method: "POST",
+        body: JSON.stringify({
+          expected_device_type: expectedDeviceType,
+          ...(businessId ? { business_id: businessId } : {}),
+        }),
+      },
+      true,
+    ),
+  claimAgentPairing: (pairingCode: string) =>
+    request<AgentPairingClaimResult>(
+      "/api/agent/pairing/claim",
+      {
+        method: "POST",
+        body: JSON.stringify({ pairing_code: pairingCode.trim().toUpperCase() }),
       },
       true,
     ),

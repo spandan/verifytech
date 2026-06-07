@@ -7,9 +7,11 @@ from fastapi.responses import FileResponse, PlainTextResponse
 
 from app.api.routes import (
     account,
+    agent_pairing,
     agents,
     auth_profile,
     certificates,
+    certification_sessions,
     dashboard,
     intake,
     reports,
@@ -52,6 +54,8 @@ app.include_router(agents.router)
 app.include_router(reports.router)
 app.include_router(reports_public.router)
 app.include_router(scan_sessions.router)
+app.include_router(agent_pairing.router)
+app.include_router(certification_sessions.router)
 app.include_router(scans.router)
 app.include_router(certificates.router)
 app.include_router(verify.router)

@@ -31,6 +31,8 @@ DROP TABLE IF EXISTS scan_reports CASCADE;
 DROP TABLE IF EXISTS account_scan_link_tokens CASCADE;
 DROP TABLE IF EXISTS scan_sessions CASCADE;
 DROP TABLE IF EXISTS scan_pairing_sessions CASCADE;
+DROP TABLE IF EXISTS agent_pairing_sessions CASCADE;
+DROP TABLE IF EXISTS certification_sessions CASCADE;
 DROP TABLE IF EXISTS certificate_events CASCADE;
 DROP TABLE IF EXISTS verification_attempts CASCADE;
 DROP TABLE IF EXISTS certificates CASCADE;
@@ -45,6 +47,8 @@ DROP TABLE IF EXISTS tenants CASCADE;
 DROP TABLE IF EXISTS profiles CASCADE;
 
 -- ─── Custom enums ─────────────────────────────────────────────────────────
+DROP TYPE IF EXISTS agent_pairing_status CASCADE;
+DROP TYPE IF EXISTS certification_session_status CASCADE;
 DROP TYPE IF EXISTS scan_pairing_status CASCADE;
 DROP TYPE IF EXISTS scan_session_status CASCADE;
 DROP TYPE IF EXISTS charger_included CASCADE;

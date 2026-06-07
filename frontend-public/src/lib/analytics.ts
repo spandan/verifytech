@@ -9,6 +9,7 @@ export type AnalyticsEventName =
   | "VerificationViewed"
   | "QrVerificationViewed"
   | "PairingSessionCreated"
+  | "CertificationSessionCreated"
   | "DeepLinkLaunchAttempted"
   | "PairingCodeCopied"
   | "AgentPairingExchangeStarted"

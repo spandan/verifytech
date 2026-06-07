@@ -4,17 +4,19 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Collapsible } from "@/components/Collapsible";
-import { api, type AgentInfo, type ScanPairingSession } from "@/lib/api";
+import { api, type AgentInfo, type CertificationSession } from "@/lib/api";
 import { trackEvent } from "@/lib/analytics";
 import { useAuth } from "@/lib/auth-context";
 import { env } from "@/lib/env";
 import { getRecommendedPlatform } from "@/components/OSDetector";
 
+type DeviceChoice = "laptop" | "desktop" | null;
+
 const FLOW_STEPS = [
-  { step: "1", title: "Start Windows Scan", desc: "Open Certronx Agent from your browser." },
-  { step: "2", title: "Run Scan", desc: "Inspect device condition in minutes." },
-  { step: "3", title: "Generate Report", desc: "Receive your trusted certification report." },
-  { step: "4", title: "Save Report", desc: "Certificate appears in your account." },
+  { step: "1", title: "Choose device type", desc: "Certronx Phase 1 certifies Windows laptops." },
+  { step: "2", title: "Launch agent", desc: "Opens Certronx Agent with a signed session token." },
+  { step: "3", title: "Eligibility check", desc: "Know within seconds if this device can be certified." },
+  { step: "4", title: "Certificate", desc: "Scan, upload, and save to your account." },
 ];
 
 export default function DownloadPage() {
@@ -23,9 +25,9 @@ export default function DownloadPage() {
   const [agent, setAgent] = useState<AgentInfo | null>(null);
   const [platform, setPlatform] = useState("windows");
   const [error, setError] = useState("");
-  const [pairing, setPairing] = useState<ScanPairingSession | null>(null);
-  const [pairingBusy, setPairingBusy] = useState(false);
-  const [copied, setCopied] = useState(false);
+  const [deviceChoice, setDeviceChoice] = useState<DeviceChoice>(null);
+  const [session, setSession] = useState<CertificationSession | null>(null);
+  const [launchBusy, setLaunchBusy] = useState(false);
 
   useEffect(() => {
     const p = getRecommendedPlatform();
@@ -38,47 +40,31 @@ export default function DownloadPage() {
       });
   }, []);
 
-  const startWindowsScan = useCallback(async () => {
+  const startLaptopCertification = useCallback(async () => {
     if (!userId) {
       router.push("/login?next=/download");
       return;
     }
 
-    setPairingBusy(true);
+    setLaunchBusy(true);
     setError("");
-    setCopied(false);
+    setSession(null);
 
     try {
-      const session = await api.createPairingSession();
-      setPairing(session);
-      trackEvent("PairingSessionCreated", { expires_at: session.expires_at });
-
+      const created = await api.createCertificationSession("laptop");
+      setSession(created);
+      trackEvent("CertificationSessionCreated", {
+        expected_device_type: created.expected_device_type,
+        expires_at: created.expires_at,
+      });
       trackEvent("DeepLinkLaunchAttempted");
-      window.location.href = session.deep_link;
-
-      setTimeout(() => {
-        if (document.hasFocus()) {
-          // Browser still focused — deep link may not have opened the agent.
-        }
-      }, 1500);
+      window.location.href = created.deep_link;
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Could not start Windows scan.");
+      setError(e instanceof Error ? e.message : "Could not start certification.");
     } finally {
-      setPairingBusy(false);
+      setLaunchBusy(false);
     }
   }, [router, userId]);
-
-  const copyPairingCode = useCallback(async () => {
-    if (!pairing?.pairing_code) return;
-    try {
-      await navigator.clipboard.writeText(pairing.pairing_code);
-      setCopied(true);
-      trackEvent("PairingCodeCopied");
-      setTimeout(() => setCopied(false), 2500);
-    } catch {
-      setError("Could not copy pairing code.");
-    }
-  }, [pairing?.pairing_code]);
 
   const isSupported = platform === "windows";
 
@@ -88,9 +74,9 @@ export default function DownloadPage() {
         <div className="page-container py-12">
           <div className="mx-auto max-w-2xl text-center">
             <p className="text-sm font-medium text-[var(--color-brand)]">Certify a device</p>
-            <h1 className="page-title mt-2">Certify with Certronx Scanner</h1>
+            <h1 className="page-title mt-2">Certify with Certronx</h1>
             <p className="page-subtitle mx-auto">
-              Signed-in users can launch the Windows agent instantly. No typing required when deep linking works.
+              Phase 1 supports Windows 10 and 11 laptops. Eligibility is checked in seconds before any full scan.
             </p>
           </div>
           <div className="flow-steps mx-auto mt-10 max-w-4xl">
@@ -111,19 +97,13 @@ export default function DownloadPage() {
             <Link href="/login?next=/download" className="text-[var(--color-brand)] hover:underline">
               Sign in
             </Link>{" "}
-            to use seamless Windows agent pairing. You can still download the scanner without an account.
+            to certify a laptop and save the certificate to your account.
           </div>
         )}
 
         {!isSupported && (
           <div className="alert alert-warning mb-6">
-            {platform === "macos" || platform === "android" ? (
-              <>
-                {platform === "macos" ? "macOS" : "Android"} scanner coming soon. Use Windows to certify today.
-              </>
-            ) : (
-              <>Windows is required for certification at this time.</>
-            )}
+            Windows is required for certification at this time.
           </div>
         )}
 
@@ -134,51 +114,91 @@ export default function DownloadPage() {
         )}
 
         {userId && isSupported && (
-          <div className="card card-body mb-6 space-y-4">
+          <div className="card card-body mb-6 space-y-5">
             <div>
-              <h2 className="font-semibold">Start Windows Scan</h2>
+              <h2 className="font-semibold">What type of device are you certifying?</h2>
               <p className="mt-1 text-sm text-secondary">
-                Opens Certronx Agent on this PC with a short-lived pairing code. The code expires in 2 minutes.
+                Certronx checks eligibility before running diagnostics so you are not kept waiting on unsupported hardware.
               </p>
             </div>
-            <button
-              type="button"
-              className="btn btn-brand btn-block"
-              disabled={pairingBusy}
-              onClick={() => void startWindowsScan()}
-            >
-              {pairingBusy ? "Creating pairing session…" : "Start Windows Scan"}
-            </button>
 
-            {pairing && (
-              <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-subtle)] p-4 text-sm space-y-3">
-                <p className="font-medium text-[var(--color-brand)]">
-                  Waiting for Certronx Agent to open…
-                </p>
-                <p className="text-secondary">
-                  If nothing happens, use the options below. Your pairing code expires at{" "}
-                  {new Date(pairing.expires_at).toLocaleTimeString()}.
-                </p>
-                <p className="font-mono text-xs break-all">{pairing.pairing_code}</p>
-                <div className="flex flex-wrap gap-2">
-                  <a href={agent?.full_download_url ?? "#"} className="btn btn-secondary btn-sm">
-                    Download Windows Agent
-                  </a>
-                  <button type="button" className="btn btn-secondary btn-sm" onClick={() => void copyPairingCode()}>
-                    {copied ? "Copied!" : "Copy Pairing Code"}
-                  </button>
-                </div>
-                <p className="text-secondary">
-                  The agent opens automatically when deep linking works. If it does not, open Certronx Agent and choose{" "}
-                  <strong>I have a code from certronx.com</strong>, then paste the code above. Connecting is required to
-                  save the certificate to your account.
+            <div className="grid gap-3 sm:grid-cols-2">
+              <button
+                type="button"
+                className={`rounded-xl border p-4 text-left transition ${
+                  deviceChoice === "laptop"
+                    ? "border-[var(--color-brand)] bg-[var(--color-bg-subtle)]"
+                    : "border-[var(--color-border)]"
+                }`}
+                onClick={() => setDeviceChoice("laptop")}
+              >
+                <p className="font-medium">Laptop</p>
+                <p className="mt-1 text-sm text-secondary">Windows 10 or 11 with a detected battery</p>
+              </button>
+              <button
+                type="button"
+                className={`rounded-xl border p-4 text-left transition ${
+                  deviceChoice === "desktop"
+                    ? "border-[var(--color-border)] bg-[var(--color-bg-subtle)]"
+                    : "border-[var(--color-border)]"
+                }`}
+                onClick={() => setDeviceChoice("desktop")}
+              >
+                <p className="font-medium">Desktop</p>
+                <p className="mt-1 text-sm text-secondary">Coming in a future release</p>
+              </button>
+            </div>
+
+            {deviceChoice === "desktop" && (
+              <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-subtle)] p-4 text-sm">
+                <p className="font-medium">Certronx desktop certification is not yet available.</p>
+                <p className="mt-2 text-secondary">
+                  Desktop, workstation, and custom PC support is planned for a future release.
                 </p>
               </div>
+            )}
+
+            {deviceChoice === "laptop" && (
+              <>
+                <button
+                  type="button"
+                  className="btn btn-brand btn-block"
+                  disabled={launchBusy}
+                  onClick={() => void startLaptopCertification()}
+                >
+                  {launchBusy ? "Creating certification session…" : "Certify Device"}
+                </button>
+
+                {session && (
+                  <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-subtle)] p-4 text-sm space-y-2">
+                    <p className="font-medium text-[var(--color-brand)]">
+                      Waiting for Certronx Agent to open…
+                    </p>
+                    <p className="text-secondary">
+                      Your signed session expires at {new Date(session.expires_at).toLocaleTimeString()}.
+                      No pairing code is required.
+                    </p>
+                    {agent && (
+                      <a href={agent.full_download_url} className="btn btn-secondary btn-sm inline-flex">
+                        Download Windows Agent
+                      </a>
+                    )}
+                  </div>
+                )}
+
+                <p className="text-sm text-secondary">
+                  Agent already open without a token?{" "}
+                  <Link href="/pair" className="text-[var(--color-brand)] hover:underline">
+                    Enter the pairing code from the agent
+                  </Link>
+                  .
+                </p>
+              </>
             )}
           </div>
         )}
 
-        {agent && (
+        {agent && deviceChoice !== "desktop" && (
           <div className="card card-body space-y-6">
             <div className="flex items-start gap-4">
               <div className="feature-card__icon">CX</div>
@@ -193,30 +213,10 @@ export default function DownloadPage() {
             <a href={agent.full_download_url} className="btn btn-secondary btn-block">
               Download Certronx Scanner
             </a>
-
-            <ul className="check-list">
-              <li>
-                <span className="check-list__icon">✓</span>
-                Seamless pairing when signed in
-              </li>
-              <li>
-                <span className="check-list__icon">✓</span>
-                Shareable report for buyers
-              </li>
-              <li>
-                <span className="check-list__icon">✓</span>
-                Public verification by code or QR
-              </li>
-            </ul>
           </div>
         )}
 
         <p className="mt-8 text-center text-sm text-muted">
-          Already have a code?{" "}
-          <Link href="/save" className="text-[var(--color-brand)] hover:underline">
-            Save to your account
-          </Link>
-          {" · "}
           <Link href="/verify" className="text-[var(--color-brand)] hover:underline">
             Verify a device
           </Link>

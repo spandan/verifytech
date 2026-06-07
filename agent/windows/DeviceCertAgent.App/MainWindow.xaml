@@ -104,6 +104,37 @@
                      Text="Without a pairing code, you still receive a certificate and report link — it just won't appear in your Certronx account dashboard."/>
         </StackPanel>
 
+        <!-- Unpaired waiting (agent-initiated pairing) -->
+        <StackPanel Visibility="{Binding CurrentPage, Converter={StaticResource PageVis}, ConverterParameter=UnpairedWaiting}">
+          <TextBlock Text="Connect to Certronx" Style="{StaticResource PageTitle}" Margin="0,0,0,12"/>
+          <TextBlock Style="{StaticResource BodyText}" Margin="0,0,0,16" TextWrapping="Wrap"
+                     Text="This scan is not connected to a Certronx account yet."/>
+          <TextBlock Style="{StaticResource BodyText}" Margin="0,0,0,20" TextWrapping="Wrap"
+                     Text="{Binding StatusMessage}"/>
+          <Border Style="{StaticResource HeroCardBorder}" Margin="0,0,0,16">
+            <StackPanel HorizontalAlignment="Center">
+              <TextBlock Text="Pairing Code" FontSize="13" Foreground="{StaticResource TextSecondaryBrush}" HorizontalAlignment="Center"/>
+              <TextBlock Text="{Binding AgentPairingCode}" FontSize="36" FontWeight="Bold" FontFamily="Consolas"
+                         Foreground="{StaticResource AccentBrush}" HorizontalAlignment="Center" Margin="0,8,0,0"/>
+            </StackPanel>
+          </Border>
+          <TextBlock Style="{StaticResource BodyText}" Foreground="{StaticResource WarningBrush}" TextWrapping="Wrap"
+                     Margin="0,0,0,12"
+                     Visibility="{Binding PairingCodeExpiredMessage, Converter={StaticResource StringNotEmptyVis}}"
+                     Text="{Binding PairingCodeExpiredMessage}"/>
+          <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
+            <Button Content="Open Certronx Pairing Page" Style="{StaticResource PrimaryButton}"
+                    Command="{Binding OpenCertronxPairingPageCommand}" Margin="0,0,10,0"/>
+            <Button Content="Refresh Pairing Code" Style="{StaticResource SecondaryButton}"
+                    Command="{Binding RefreshPairingCodeCommand}" Margin="0,0,10,0"/>
+            <Button Content="Exit" Style="{StaticResource SecondaryButton}" Command="{Binding CancelCommand}"/>
+          </StackPanel>
+          <Button Content="Continue without account" Style="{StaticResource SecondaryButton}" HorizontalAlignment="Left"
+                  Command="{Binding ContinueWithoutAccountFromUnpairedCommand}" Margin="0,8,0,0"/>
+          <TextBlock Text="{Binding ErrorMessage}" Foreground="{StaticResource ErrorBrush}" Margin="0,12,0,0"
+                     Visibility="{Binding HasError, Converter={StaticResource BoolVis}}"/>
+        </StackPanel>
+
         <!-- Pairing manual (account-linked path) -->
         <StackPanel Visibility="{Binding CurrentPage, Converter={StaticResource PageVis}, ConverterParameter=PairingManual}">
           <TextBlock Text="Connect to Certronx" Style="{StaticResource PageTitle}" Margin="0,0,0,8"/>
@@ -123,6 +154,23 @@
           </StackPanel>
           <TextBlock Text="{Binding ErrorMessage}" Foreground="{StaticResource ErrorBrush}" Margin="0,12,0,0"
                      Visibility="{Binding HasError, Converter={StaticResource BoolVis}}"/>
+        </StackPanel>
+
+        <!-- Eligibility checking -->
+        <StackPanel Visibility="{Binding CurrentPage, Converter={StaticResource PageVis}, ConverterParameter=EligibilityChecking}">
+          <TextBlock Text="Checking eligibility" Style="{StaticResource PageTitle}" Margin="0,0,0,12"/>
+          <TextBlock Style="{StaticResource BodyText}" Text="{Binding StatusMessage}" Margin="0,0,0,8"/>
+          <TextBlock Style="{StaticResource BodyText}" Foreground="{StaticResource AccentBrush}"
+                     Text="This usually takes a few seconds."/>
+        </StackPanel>
+
+        <!-- Not eligible -->
+        <StackPanel Visibility="{Binding CurrentPage, Converter={StaticResource PageVis}, ConverterParameter=NotEligible}">
+          <TextBlock Text="Not eligible for certification" Style="{StaticResource PageTitle}" Margin="0,0,0,12"/>
+          <Border Style="{StaticResource CardBorder}" Margin="0,0,0,20">
+            <TextBlock Style="{StaticResource BodyText}" Text="{Binding EligibilityMessage}" TextWrapping="Wrap"/>
+          </Border>
+          <Button Content="Close" Style="{StaticResource AccentButton}" Command="{Binding CloseNotEligibleCommand}" HorizontalAlignment="Left"/>
         </StackPanel>
 
         <!-- Pairing connecting -->

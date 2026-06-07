@@ -263,6 +263,54 @@ CREATE INDEX idx_scan_pairing_sessions_code ON scan_pairing_sessions(pairing_cod
 CREATE INDEX idx_scan_pairing_sessions_status ON scan_pairing_sessions(status);
 CREATE INDEX idx_scan_pairing_sessions_expires_at ON scan_pairing_sessions(expires_at);
 
+-- ─── Certification sessions (signed website token → agent) ───────────────────
+CREATE TYPE certification_session_status AS ENUM (
+    'pending', 'validated', 'exchanged', 'uploaded', 'expired', 'revoked', 'ineligible'
+);
+
+CREATE TABLE certification_sessions (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    session_id TEXT NOT NULL UNIQUE,
+    user_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+    tenant_id UUID REFERENCES tenants(id) ON DELETE SET NULL,
+    expected_device_type TEXT NOT NULL DEFAULT 'laptop',
+    token_jti TEXT NOT NULL,
+    status certification_session_status NOT NULL DEFAULT 'pending',
+    expires_at TIMESTAMPTZ NOT NULL,
+    validated_at TIMESTAMPTZ,
+    exchanged_at TIMESTAMPTZ,
+    uploaded_at TIMESTAMPTZ,
+    agent_version TEXT,
+    scan_session_id TEXT,
+    paired_device_fingerprint TEXT,
+    ineligibility_reason TEXT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX idx_certification_sessions_session_id ON certification_sessions(session_id);
+CREATE INDEX idx_certification_sessions_user_id ON certification_sessions(user_id);
+CREATE INDEX idx_certification_sessions_status ON certification_sessions(status);
+
+-- ─── Agent-initiated pairing (manual launch / token recovery) ───────────────
+CREATE TYPE agent_pairing_status AS ENUM ('PENDING', 'PAIRED', 'EXPIRED');
+
+CREATE TABLE agent_pairing_sessions (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    pairing_code TEXT NOT NULL UNIQUE,
+    device_nonce TEXT NOT NULL,
+    status agent_pairing_status NOT NULL DEFAULT 'PENDING',
+    expires_at TIMESTAMPTZ NOT NULL,
+    user_id UUID REFERENCES profiles(id) ON DELETE SET NULL,
+    certification_session_id UUID REFERENCES certification_sessions(id) ON DELETE SET NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    paired_at TIMESTAMPTZ
+);
+
+CREATE INDEX idx_agent_pairing_sessions_code ON agent_pairing_sessions(pairing_code);
+CREATE INDEX idx_agent_pairing_sessions_device_nonce ON agent_pairing_sessions(device_nonce);
+CREATE INDEX idx_agent_pairing_sessions_status ON agent_pairing_sessions(status);
+CREATE INDEX idx_agent_pairing_sessions_expires_at ON agent_pairing_sessions(expires_at);
+
 -- ─── Agent scan sessions (short-lived, nonce-bound) ───────────────────────
 CREATE TYPE scan_session_status AS ENUM ('started', 'exchanged', 'submitted', 'expired', 'rejected');
 
@@ -291,6 +339,7 @@ CREATE TABLE scan_sessions (
     tenant_id UUID REFERENCES tenants(id) ON DELETE SET NULL,
     notification_email TEXT,
     pairing_session_id UUID REFERENCES scan_pairing_sessions(id) ON DELETE SET NULL,
+    certification_session_id UUID REFERENCES certification_sessions(id) ON DELETE SET NULL,
     upload_jti TEXT,
     paired_device_fingerprint TEXT,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()

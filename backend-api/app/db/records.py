@@ -340,6 +340,7 @@ class ScanSession:
     tenant_id: str | None = None
     notification_email: str | None = None
     pairing_session_id: str | None = None
+    certification_session_id: str | None = None
     upload_jti: str | None = None
     paired_device_fingerprint: str | None = None
     created_at: datetime | None = None
@@ -370,6 +371,7 @@ class ScanSession:
             tenant_id=row.get("tenant_id"),
             notification_email=row.get("notification_email"),
             pairing_session_id=str(row["pairing_session_id"]) if row.get("pairing_session_id") else None,
+            certification_session_id=str(row["certification_session_id"]) if row.get("certification_session_id") else None,
             upload_jti=row.get("upload_jti"),
             paired_device_fingerprint=row.get("paired_device_fingerprint"),
             created_at=_parse_dt(row.get("created_at")),

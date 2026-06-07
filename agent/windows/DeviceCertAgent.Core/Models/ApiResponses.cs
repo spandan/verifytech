@@ -53,3 +53,27 @@ public sealed class ScanPairingExchangeResponse
     public string ScanSessionId { get; set; } = "";
     public string? LinkedAccountName { get; set; }
 }
+
+public sealed class CertificationSessionValidateResponse
+{
+    public string SessionId { get; set; } = "";
+    public string UserId { get; set; } = "";
+    public string ExpectedDeviceType { get; set; } = "laptop";
+    public string? LinkedAccountName { get; set; }
+}
+
+public sealed class AgentPairingCreateResponse
+{
+    public string PairingCode { get; set; } = "";
+    public int ExpiresInMinutes { get; set; }
+    public DateTime ExpiresAt { get; set; }
+}
+
+public sealed class AgentPairingStatusResponse
+{
+    public string Status { get; set; } = "PENDING";
+    public string? UserId { get; set; }
+    public string? SessionId { get; set; }
+    public string? CertificationToken { get; set; }
+    public DateTime? ExpiresAt { get; set; }
+}
