@@ -1,6 +1,7 @@
 import type { CertificationSummary } from "@/lib/certification-summary";
 
 import { ConditionBadge, ScoreDisplay } from "@/components/ConditionBadge";
+import { CopyableCode } from "@/components/CopyableCode";
 
 export function BuyerDeviceSummary({ summary }: { summary: CertificationSummary }) {
   return (
@@ -38,7 +39,7 @@ export function BuyerDeviceSummary({ summary }: { summary: CertificationSummary 
           label="Certification Date"
           value={new Date(summary.certificationDate).toLocaleDateString()}
         />
-        <SummaryItem label="Certificate ID" value={summary.certificateId} mono />
+        <SummaryItem label="Certificate ID" value={summary.certificateId} mono copyable />
       </div>
 
       <div className="buyer-summary__score">
@@ -52,15 +53,25 @@ function SummaryItem({
   label,
   value,
   mono,
+  copyable,
 }: {
   label: string;
   value: string;
   mono?: boolean;
+  copyable?: boolean;
 }) {
   return (
     <div className="metric-cell">
       <p className="metric-cell__label">{label}</p>
-      <p className={`metric-cell__value ${mono ? "metric-cell__value--mono" : ""}`}>{value}</p>
+      {copyable ? (
+        <CopyableCode
+          value={value}
+          monoClassName={`metric-cell__value ${mono ? "metric-cell__value--mono" : ""}`}
+          copyLabel={`Copy ${label.toLowerCase()}`}
+        />
+      ) : (
+        <p className={`metric-cell__value ${mono ? "metric-cell__value--mono" : ""}`}>{value}</p>
+      )}
     </div>
   );
 }

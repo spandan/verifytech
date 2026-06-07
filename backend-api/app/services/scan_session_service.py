@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import secrets
 from datetime import datetime, timedelta, timezone
 from typing import Any
@@ -30,6 +31,8 @@ from app.services.report_service import ReportService
 from app.services.scan_report_service import ScanReportService, extract_assessment_metadata
 from app.services.scan_pairing_service import ScanPairingService
 from app.services.certification_session_service import CertificationSessionService
+
+logger = logging.getLogger(__name__)
 
 
 class ScanSessionService:
@@ -235,12 +238,26 @@ class ScanSessionService:
 
         evidence_manifest: list[dict] = []
         if body.evidence_artifacts and result.certificate_code:
-            evidence_manifest = self._evidence.upload_artifacts(
-                result.certificate_code,
-                [a.model_dump(mode="json") for a in body.evidence_artifacts],
-            )
+            try:
+                evidence_manifest = self._evidence.upload_artifacts(
+                    result.certificate_code,
+                    [a.model_dump(mode="json") for a in body.evidence_artifacts],
+                )
+            except Exception as exc:
+                logger.warning(
+                    "Evidence upload skipped for certificate %s: %s",
+                    result.certificate_code,
+                    exc,
+                )
 
-        inspection = self._inspection.build(body.scan_data, evidence_manifest)
+        try:
+            inspection = self._inspection.build(body.scan_data, evidence_manifest)
+        except Exception as exc:
+            logger.exception("Inspection report build failed for session %s", session_id)
+            raise ValueError(
+                "Could not build the inspection report from scan data. "
+                "Please retry; if this persists, contact support."
+            ) from exc
         assessment = body.scan_data.get("certification_assessment") or {}
         summary_layer = inspection.get("summary") if isinstance(inspection, dict) else {}
         condition_grade = (
@@ -252,30 +269,44 @@ class ScanSessionService:
         provenance = bundle.get("build_provenance") if isinstance(bundle, dict) else None
         cert = db.get_certificate_by_code(result.certificate_code)
         if cert:
-            payload = dict(cert.public_payload_json or {})
-            payload["inspection_report"] = inspection
-            payload["agent_provenance"] = provenance
-            payload["evidence_manifest"] = evidence_manifest
-            db.client.table("certificates").update(
-                {
-                    "public_payload_json": payload,
-                    "condition_grade": condition_grade,
-                }
-            ).eq("id", cert.id).execute()
+            try:
+                payload = dict(cert.public_payload_json or {})
+                payload["inspection_report"] = inspection
+                payload["agent_provenance"] = provenance
+                payload["evidence_manifest"] = evidence_manifest
+                db.client.table("certificates").update(
+                    {
+                        "public_payload_json": payload,
+                        "condition_grade": condition_grade,
+                    }
+                ).eq("id", cert.id).execute()
+            except Exception as exc:
+                logger.warning(
+                    "Could not enrich certificate payload for %s: %s",
+                    result.certificate_code,
+                    exc,
+                )
 
         meta = extract_assessment_metadata(body.scan_data, inspection)
         if result.report_id:
-            db.update_device_report(
-                result.report_id,
-                {
-                    "certification_assessment_json": assessment or None,
-                    "inspection_report_json": inspection,
-                    "assessment_version": meta.get("assessment_version"),
-                    "resale_grade": meta.get("resale_grade"),
-                    "overall_score": meta.get("overall_score"),
-                    "battery_wear_percent": meta.get("battery_wear_percent"),
-                },
-            )
+            try:
+                db.update_device_report(
+                    result.report_id,
+                    {
+                        "certification_assessment_json": assessment or None,
+                        "inspection_report_json": inspection,
+                        "assessment_version": meta.get("assessment_version"),
+                        "resale_grade": meta.get("resale_grade"),
+                        "overall_score": meta.get("overall_score"),
+                        "battery_wear_percent": meta.get("battery_wear_percent"),
+                    },
+                )
+            except Exception as exc:
+                logger.warning(
+                    "Could not persist assessment columns on report %s: %s",
+                    result.report_id,
+                    exc,
+                )
 
         serial_hash, serial_last4 = self._scan_reports.extract_serial_fields(body.scan_data)
         if result.device_id and (serial_hash or serial_last4):

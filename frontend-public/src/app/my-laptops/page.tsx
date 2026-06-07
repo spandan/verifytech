@@ -2,6 +2,7 @@
 
 import { FormEvent, useEffect, useState } from "react";
 import Link from "next/link";
+import { CopyableCode } from "@/components/CopyableCode";
 
 import { api, type MyLaptop } from "@/lib/api";
 import { useAuth } from "@/lib/auth-context";
@@ -144,7 +145,11 @@ export default function MyLaptopsPage() {
                       </p>
                     </>
                   )}
-                  <p className="mt-2 font-mono text-xs text-muted">{laptop.verification_code}</p>
+                  <CopyableCode
+                    value={laptop.verification_code}
+                    className="mt-2 text-xs text-muted"
+                    copyLabel="Copy verification code"
+                  />
                   <div className="mt-2 flex flex-wrap gap-2">
                     <span className={`badge ${statusBadge(laptop.verification_status)}`}>
                       {laptop.verification_status}

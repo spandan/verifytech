@@ -942,10 +942,22 @@ public partial class ShellViewModel : ObservableObject
     }
 
     [RelayCommand]
+    private void CopyAgentPairingCode()
+    {
+        if (string.IsNullOrWhiteSpace(AgentPairingCode))
+            return;
+        Clipboard.SetText(AgentPairingCode);
+        StatusMessage = "Pairing code copied.";
+    }
+
+    [RelayCommand]
     private void CopyCertificateCode()
     {
         if (_certResult?.CertificateCode is not null)
+        {
             Clipboard.SetText(_certResult.CertificateCode);
+            StatusMessage = "Certificate code copied.";
+        }
     }
 
     [RelayCommand]
@@ -1003,9 +1015,23 @@ public partial class ShellViewModel : ObservableObject
     private string MapScanError(Exception ex) => ex switch
     {
         InvalidOperationException ioe => ioe.Message,
-        HttpRequestException hre =>
-            $"Unable to reach Certronx. Check your internet connection and try again.\n\nServer: {_settings.ApiBaseUrl}\n\nDetails: {hre.Message}",
+        HttpRequestException hre when hre.Message.Contains("500")
+            => "Certronx could not create your certificate (server error). Please try again in a few minutes.",
+        HttpRequestException hre when hre.Message.Contains("422")
+            => ExtractApiDetail(hre.Message, "Submission was rejected. Please scan again."),
+        HttpRequestException
+            => "Could not reach Certronx. Check your internet connection and try again.",
         UnauthorizedAccessException => "Permission was denied for part of this scan. You can retry with a standard scan.",
-        _ => $"Something went wrong during the scan. Please try again.\n\nServer: {_settings.ApiBaseUrl}\n\nDetails: {ex.Message}",
+        _ => "Something went wrong during the scan. Please try again.",
     };
+
+    private static string ExtractApiDetail(string message, string fallback)
+    {
+        const string marker = "): ";
+        var idx = message.IndexOf(marker, StringComparison.Ordinal);
+        if (idx < 0)
+            return fallback;
+        var detail = message[(idx + marker.Length)..].Trim();
+        return string.IsNullOrWhiteSpace(detail) || detail.StartsWith('{') ? fallback : detail;
+    }
 }

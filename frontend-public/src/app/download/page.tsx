@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Collapsible } from "@/components/Collapsible";
+import { CopyableCode } from "@/components/CopyableCode";
 import { api, type AgentInfo, type CertificationSession } from "@/lib/api";
 import { trackEvent } from "@/lib/analytics";
 import { useAuth } from "@/lib/auth-context";
@@ -229,7 +230,7 @@ export default function DownloadPage() {
 function CollapsibleChecksum({ checksum }: { checksum: string }) {
   return (
     <Collapsible title="File checksum">
-      <p className="font-mono text-xs break-all">{checksum}</p>
+      <CopyableCode value={checksum} monoClassName="font-mono text-xs break-all" copyLabel="Copy checksum" />
     </Collapsible>
   );
 }

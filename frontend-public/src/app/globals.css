@@ -358,6 +358,48 @@ body {
 .metric-cell__value { margin-top: var(--space-1); font-size: 0.9375rem; font-weight: 600; }
 .metric-cell__value--mono { font-family: var(--font-mono); font-size: 0.8125rem; }
 
+.copyable-code {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  max-width: 100%;
+}
+
+.metric-cell .copyable-code {
+  margin-top: var(--space-1);
+}
+
+.copyable-code > span:first-child {
+  min-width: 0;
+  word-break: break-all;
+}
+
+.copy-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 1.75rem;
+  height: 1.75rem;
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.copy-btn:hover:not(:disabled) {
+  background: var(--color-bg-subtle);
+  color: var(--color-text-primary);
+}
+
+.copy-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
 .btn {
   display: inline-flex;
   align-items: center;

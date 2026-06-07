@@ -2,6 +2,7 @@ using System.Net.Http;
 using DeviceCertAgent.Core.Configuration;
 using DeviceCertAgent.Core.Models;
 using DeviceCertAgent.Core.Models.V2;
+using DeviceCertAgent.Core.Models.V2;
 
 namespace DeviceCertAgent.Core.Services;
 
@@ -181,7 +182,7 @@ public sealed class ScanSessionFlowService : IDisposable
     {
         var launch = new AppLaunchOptions { Mode = "certify" };
         var report = _reportAssembly.Assemble(collected, launch, adminMode);
-        report.EvidenceBundle = collected.Evidence;
+        report.EvidenceBundle = SlimEvidenceBundle(collected.Evidence);
         var fingerprint = HardwareFingerprintService.Compute(collected);
 
         return new ScanSessionSubmitPayload
@@ -202,6 +203,28 @@ public sealed class ScanSessionFlowService : IDisposable
     private static string MaskId(string id) =>
         id.Length <= 8 ? "****" : $"{id[..4]}…{id[^4..]}";
 
+    private static CertificationEvidenceBundle? SlimEvidenceBundle(CertificationEvidenceBundle? bundle)
+    {
+        if (bundle is null)
+            return null;
+
+        return new CertificationEvidenceBundle
+        {
+            BundleVersion = bundle.BundleVersion,
+            BuildProvenance = bundle.BuildProvenance,
+            Artifacts = bundle.Artifacts
+                .Select(a => new EvidenceArtifact
+                {
+                    ArtifactType = a.ArtifactType,
+                    ContentType = a.ContentType,
+                    Content = [],
+                    CollectedAt = a.CollectedAt,
+                    Source = a.Source,
+                })
+                .ToList(),
+        };
+    }
+
     private static Exception MapFriendly(Exception ex, string endpointUrl, string? prefix = null) => ex switch
     {
         HttpRequestException { Message: var m } when m.Contains("410") || m.Contains("expired", StringComparison.OrdinalIgnoreCase)
@@ -211,17 +234,42 @@ public sealed class ScanSessionFlowService : IDisposable
                     : $"{prefix}: pairing code expired. Request a new code from the website."),
         HttpRequestException { Message: var m } when m.Contains("409")
             => new InvalidOperationException("This scan was already submitted."),
+        HttpRequestException { Message: var m } when m.Contains("422")
+            => new InvalidOperationException(ParseApiDetail(m, prefix, "Submission was rejected")),
+        HttpRequestException { Message: var m } when m.Contains("500")
+            => new InvalidOperationException(
+                prefix is null
+                    ? "Certronx could not create your certificate (server error). Please try again in a few minutes."
+                    : $"{prefix}: server error. Please try again shortly."),
         HttpRequestException { Message: var m } when m.Contains("503") || m.Contains("502")
             => new InvalidOperationException(
-                $"The Certronx server is temporarily unavailable.\n\nEndpoint: {endpointUrl}\n\nDetails: {m}"),
+                prefix is null
+                    ? "The Certronx server is temporarily unavailable. Please try again shortly."
+                    : $"{prefix}: server unavailable. Please try again shortly."),
         HttpRequestException hre
             => new InvalidOperationException(
-                $"Unable to reach Certronx. Check your internet connection and try again.\n\nEndpoint: {endpointUrl}\n\nDetails: {hre.Message}"),
+                prefix is null
+                    ? $"Could not reach Certronx. Check your internet connection and try again.\n\n{ParseApiDetail(hre.Message, null, "Request failed")}"
+                    : $"{prefix}.\n\n{ParseApiDetail(hre.Message, null, "Request failed")}"),
         TaskCanceledException
             => new InvalidOperationException(
-                $"The request timed out. Check your connection and try again.\n\nEndpoint: {endpointUrl}"),
+                prefix is null
+                    ? "The request timed out. Check your connection and try again."
+                    : $"{prefix}: request timed out."),
         _ => ex,
     };
+
+    private static string ParseApiDetail(string message, string? prefix, string fallback)
+    {
+        const string marker = "): ";
+        var idx = message.IndexOf(marker, StringComparison.Ordinal);
+        var detail = idx >= 0 ? message[(idx + marker.Length)..].Trim() : message.Trim();
+        if (string.IsNullOrWhiteSpace(detail))
+            return fallback;
+        if (detail.StartsWith('{') || detail.StartsWith('['))
+            return fallback;
+        return detail;
+    }
 
     private static List<EvidenceArtifactUpload>? SerializeEvidence(CertificationEvidenceBundle? bundle)
     {

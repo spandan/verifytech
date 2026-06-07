@@ -57,13 +57,13 @@ class InspectionReportService:
         windows = assessment.get("windows") or {}
 
         device_name = f"{t1.get('manufacturer', '')} {t1.get('model', '')}".strip() or "This device"
-        ram_gb = t1.get("ram_total_gb")
-        storage_gb = t1.get("storage_total_gb")
-        cpu = t1.get("cpu_model") or (t2.get("cpu") or {}).get("model")
+        ram_gb = _cv(t1.get("ram_total_gb"))
+        storage_gb = _cv(t1.get("storage_total_gb"))
+        cpu = t1.get("cpu_model") or _cv((t2.get("cpu") or {}).get("model"))
         specs_parts = [p for p in [
             cpu,
-            f"{int(ram_gb)} GB RAM" if ram_gb else None,
-            f"{int(storage_gb)} GB storage" if storage_gb else None,
+            f"{int(float(ram_gb))} GB RAM" if ram_gb is not None else None,
+            f"{int(float(storage_gb))} GB storage" if storage_gb is not None else None,
         ] if p]
         specs_line = " · ".join(specs_parts) if specs_parts else "Specifications on file"
 

@@ -43,7 +43,13 @@ public sealed class EligibilityProbeService
 
     private static (bool Detected, string? Hint) DetectVirtualMachine(string manufacturer, string model)
     {
-        var haystack = $"{manufacturer} {model}".ToUpperInvariant();
+        var manUpper = manufacturer.ToUpperInvariant();
+        var modelUpper = model.ToUpperInvariant();
+        var haystack = $"{manUpper} {modelUpper}";
+
+        if (IsLikelyPhysicalOem(manUpper, modelUpper))
+            return (false, null);
+
         var bios = WmiHelper.Query("SELECT SerialNumber, Version, Manufacturer FROM Win32_BIOS").FirstOrDefault();
         if (bios is not null)
             haystack += " " + Clean(bios.GetValueOrDefault("SerialNumber")).ToUpperInvariant()
@@ -55,21 +61,64 @@ public sealed class EligibilityProbeService
             haystack += " " + Clean(board.GetValueOrDefault("Manufacturer")).ToUpperInvariant()
                 + " " + Clean(board.GetValueOrDefault("Product")).ToUpperInvariant();
 
-        var cs = WmiHelper.Query("SELECT HypervisorPresent FROM Win32_ComputerSystem").FirstOrDefault();
-        if (SafeConvert.ToBool(cs?.GetValueOrDefault("HypervisorPresent")) == true)
-            return (true, "Hypervisor detected");
+        if (manUpper.Contains("MICROSOFT CORPORATION", StringComparison.Ordinal)
+            && modelUpper.Contains("VIRTUAL", StringComparison.Ordinal))
+            return (true, "Microsoft Virtual Machine");
 
-        string?[] vmMarkers =
+        string?[] vmPhrases =
         [
-            "VMWARE", "VIRTUALBOX", "VBOX", "QEMU", "KVM", "XEN", "PARALLELS",
-            "VIRTUAL MACHINE", "MICROSOFT VIRTUAL", "INNOTEK", "BOCHS", "UTM",
+            "VMWARE", "VIRTUALBOX", "QEMU", "PARALLELS",
+            "VIRTUAL MACHINE", "MICROSOFT VIRTUAL", "INNOTEK", "BOCHS",
         ];
-        foreach (var marker in vmMarkers)
+        foreach (var phrase in vmPhrases)
         {
-            if (haystack.Contains(marker, StringComparison.Ordinal))
-                return (true, marker);
+            if (haystack.Contains(phrase, StringComparison.Ordinal))
+                return (true, phrase);
         }
 
+        if (ContainsVmToken(haystack, "VBOX")
+            || ContainsVmToken(haystack, "KVM")
+            || ContainsVmToken(haystack, "XEN")
+            || ContainsVmToken(haystack, "UTM"))
+            return (true, "virtualization_guest");
+
         return (false, null);
+    }
+
+    /// <summary>
+    /// HypervisorPresent is true on many physical PCs (VBS, WSL2, Hyper-V host features) — not proof of a VM guest.
+    /// </summary>
+    private static bool IsLikelyPhysicalOem(string manufacturerUpper, string modelUpper)
+    {
+        string?[] oemPrefixes =
+        [
+            "HP", "HEWLETT-PACKARD", "HEWLETT PACKARD", "DELL", "LENOVO", "ASUSTEK", "ASUS",
+            "ACER", "MSI", "SAMSUNG", "LG", "RAZER", "GIGABYTE", "MICRO-STAR", "HUAWEI",
+            "TOSHIBA", "FUJITSU", "PANASONIC", "SONY", "MICROSOFT SURFACE",
+        ];
+        foreach (var prefix in oemPrefixes)
+        {
+            if (manufacturerUpper.StartsWith(prefix, StringComparison.Ordinal)
+                || modelUpper.StartsWith(prefix, StringComparison.Ordinal))
+                return true;
+        }
+
+        return false;
+    }
+
+    private static bool ContainsVmToken(string haystack, string token)
+    {
+        var index = haystack.IndexOf(token, StringComparison.Ordinal);
+        while (index >= 0)
+        {
+            var beforeOk = index == 0 || !char.IsLetterOrDigit(haystack[index - 1]);
+            var afterIndex = index + token.Length;
+            var afterOk = afterIndex >= haystack.Length || !char.IsLetterOrDigit(haystack[afterIndex]);
+            if (beforeOk && afterOk)
+                return true;
+            index = haystack.IndexOf(token, index + 1, StringComparison.Ordinal);
+        }
+
+        return false;
     }
 }

@@ -1,5 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 
+import logging
+
 from app.auth.deps import AuthUser, get_current_user
 from app.db.models import Database, get_db
 from app.schemas.dto import (
@@ -18,6 +20,7 @@ from app.services.scan_session_service import ScanSessionService
 router = APIRouter(prefix="/api/scan-sessions", tags=["scan-sessions"])
 _service = ScanSessionService()
 _pairing = ScanPairingService()
+logger = logging.getLogger(__name__)
 
 
 @router.post("/create-pairing", response_model=ScanPairingCreateResponse)
@@ -53,6 +56,12 @@ def start_scan_session(body: ScanSessionStartRequest, db: Database = Depends(get
         return _service.start(db, body)
     except ValueError as e:
         raise HTTPException(status_code=422, detail=str(e))
+    except Exception as e:
+        logger.exception("scan session start failed")
+        raise HTTPException(
+            status_code=500,
+            detail="Could not start a scan session. Please try again shortly.",
+        ) from e
 
 
 @router.post("/{session_id}/submit", response_model=ScanSessionSubmitResponse)
@@ -70,3 +79,9 @@ def submit_scan_session(
         if "already been used" in detail.lower():
             status = 409
         raise HTTPException(status_code=status, detail=detail)
+    except Exception as e:
+        logger.exception("scan session submit failed session_id=%s", session_id)
+        raise HTTPException(
+            status_code=500,
+            detail="Certificate submission failed on the server. Please try again in a few minutes.",
+        ) from e

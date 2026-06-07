@@ -114,8 +114,15 @@
           <Border Style="{StaticResource HeroCardBorder}" Margin="0,0,0,16">
             <StackPanel HorizontalAlignment="Center">
               <TextBlock Text="Pairing Code" FontSize="13" Foreground="{StaticResource TextSecondaryBrush}" HorizontalAlignment="Center"/>
-              <TextBlock Text="{Binding AgentPairingCode}" FontSize="36" FontWeight="Bold" FontFamily="Consolas"
-                         Foreground="{StaticResource AccentBrush}" HorizontalAlignment="Center" Margin="0,8,0,0"/>
+              <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,8,0,0">
+                <TextBlock Text="{Binding AgentPairingCode}" FontSize="36" FontWeight="Bold" FontFamily="Consolas"
+                           Foreground="{StaticResource AccentBrush}" VerticalAlignment="Center"/>
+                <Button Style="{StaticResource IconButton}" Command="{Binding CopyAgentPairingCodeCommand}"
+                        Margin="8,0,0,0" VerticalAlignment="Center"
+                        ToolTip="Copy pairing code">
+                  <Path Style="{StaticResource CopyIconPath}"/>
+                </Button>
+              </StackPanel>
             </StackPanel>
           </Border>
           <TextBlock Style="{StaticResource BodyText}" Foreground="{StaticResource WarningBrush}" TextWrapping="Wrap"
@@ -840,7 +847,14 @@
           <Border Background="#E6F4F1" CornerRadius="14" Padding="28" Margin="0,0,0,24">
             <StackPanel HorizontalAlignment="Center">
               <TextBlock Text="Certified" FontSize="30" FontWeight="SemiBold" Foreground="{StaticResource AccentBrush}" HorizontalAlignment="Center"/>
-              <TextBlock Text="{Binding CertResult.CertificateCode}" FontSize="22" FontFamily="Consolas" Margin="0,14,0,0" HorizontalAlignment="Center"/>
+              <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,14,0,0">
+                <TextBlock Text="{Binding CertResult.CertificateCode}" FontSize="22" FontFamily="Consolas" VerticalAlignment="Center"/>
+                <Button Style="{StaticResource IconButton}" Command="{Binding CopyCertificateCodeCommand}"
+                        Margin="8,0,0,0" VerticalAlignment="Center"
+                        ToolTip="Copy certificate code">
+                  <Path Style="{StaticResource CopyIconPath}"/>
+                </Button>
+              </StackPanel>
               <TextBlock Style="{StaticResource BodyText}" Margin="0,10,0,0" HorizontalAlignment="Center" TextWrapping="Wrap"
                          Text="Your certificate was signed by Certronx."
                          Visibility="{Binding ShowCertificateLinkedToAccount, Converter={StaticResource InverseBool}}"/>

@@ -2,6 +2,7 @@ import type { CertificatePublic } from "@/lib/api";
 import { buildCertificationSummary } from "@/lib/certification-summary";
 
 import { VerificationQrCode } from "@/components/VerificationQrCode";
+import { CopyableCode } from "@/components/CopyableCode";
 
 const LEVEL_LABELS: Record<string, string> = {
   identity_verified: "Identity Verified",
@@ -59,7 +60,7 @@ export function CertificateCard({ cert }: { cert: CertificatePublic }) {
             </div>
 
             <div className="cert-hero__metrics">
-              <Metric label="Certificate ID" value={cert.certificate_code} mono />
+              <Metric label="Certificate ID" value={cert.certificate_code} mono copyable />
               <Metric
                 label="Certified"
                 value={new Date(cert.certification_date).toLocaleDateString()}
@@ -93,15 +94,25 @@ function Metric({
   label,
   value,
   mono,
+  copyable,
 }: {
   label: string;
   value: string;
   mono?: boolean;
+  copyable?: boolean;
 }) {
   return (
     <div className="metric-cell">
       <p className="metric-cell__label">{label}</p>
-      <p className={`metric-cell__value ${mono ? "metric-cell__value--mono" : ""}`}>{value}</p>
+      {copyable ? (
+        <CopyableCode
+          value={value}
+          monoClassName={`metric-cell__value ${mono ? "metric-cell__value--mono" : ""}`}
+          copyLabel={`Copy ${label.toLowerCase()}`}
+        />
+      ) : (
+        <p className={`metric-cell__value ${mono ? "metric-cell__value--mono" : ""}`}>{value}</p>
+      )}
     </div>
   );
 }

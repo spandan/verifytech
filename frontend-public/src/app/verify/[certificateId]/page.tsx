@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { BuyerDeviceSummary } from "@/components/BuyerDeviceSummary";
 import { ShareCertificateSection } from "@/components/ShareCertificateSection";
 import { ShareCertificateClient } from "@/components/ShareCertificateClient";
-import { VerificationQrCode } from "@/components/VerificationQrCode";
+import { CopyableVerificationUrl } from "@/components/CopyableVerificationUrl";
 import { api } from "@/lib/api";
 import { buildCertificationSummary } from "@/lib/certification-summary";
 
@@ -45,7 +45,7 @@ export default async function VerifyCertificatePage({ params }: Props) {
         <div className="flex flex-col items-center gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div className="space-y-2 text-center sm:text-left">
             <p className="text-sm font-medium text-secondary">Verification URL</p>
-            <p className="break-all font-mono text-sm">{summary.verificationUrl}</p>
+            <CopyableVerificationUrl url={summary.verificationUrl} />
             <p className="text-sm text-muted">
               Share this link with buyers so they can confirm the certification before purchase.
             </p>
